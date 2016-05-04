@@ -2,13 +2,13 @@ compile:
 	gcc -c main.c
 
 link:
-	gcc main.o -o main -lglfw -lGL
+	gcc *.o -o mainCraft.run -lglfw -lGL
 
 run:
-	./main
+	./mainCraft.run
 
 clean:
-	rm main.o
-	rm main
+	rm *.o
+	rm mainCraft.run
 
 all: compile link
