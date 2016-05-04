@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 
-/* A routine that is called every time an error happens */
+/* callback for error events */
 static void error_callback(int error, const char* description)
 {
     // log error
@@ -11,7 +11,7 @@ static void error_callback(int error, const char* description)
 }
 
 
-/* A routine that is called every time a key is pressed */
+/* callback for key events */
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     // if key is escape: close window
