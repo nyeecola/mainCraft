@@ -10,26 +10,49 @@ const float SKY_COLOR_BLUE = 1;
 const float SKY_COLOR_ALPHA = 1;
 
 
+/* draws on screen */
+static void draw() {
+
+    // fill sky with color
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+
 /* callback for error events */
-static void error_callback(int error, const char* description)
-{
+static void error_callback(int error, const char* description) {
+
     // log error
     fputs(description, stderr);
 }
 
 
 /* callback for key events */
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
     // if key is escape: close window
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
 
+/* configures opengl */
+static void setup () {
+
+    // set background color (sky)
+    glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
+
+    // enable culling (meaning that the program won't render unseen polygons)
+    glEnable(GL_CULL_FACE);
+
+    // set texture min/magnification filters to nearest
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
+
 /* main program */
-int main(void)
-{
+int main(void) {
+
     // define window
     GLFWwindow* window;
 
@@ -59,6 +82,9 @@ int main(void)
     // set key callback
     glfwSetKeyCallback(window, key_callback);
 
+    // configure opengl preferences
+    setup();
+
     // main program loop
     while (!glfwWindowShouldClose(window))
     {
@@ -69,16 +95,8 @@ int main(void)
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
 
-        // fill sky with color
-        glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // enable culling (meaning that the program won't render unseen polygons)
-        glEnable(GL_CULL_FACE);
-
-        // set texture min/magnification filters to nearest
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // draw
+        draw();
 
         // swap buffers
         glfwSwapBuffers(window);
