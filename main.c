@@ -37,6 +37,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 /* configures opengl */
 static void setup () {
+    GLfloat fog_color[4] = {SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA};
 
     // set background color (sky)
     glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
@@ -47,6 +48,22 @@ static void setup () {
     // set texture min/magnification filters to nearest
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // enable fog
+    glEnable(GL_FOG);
+
+    // set fog color
+    glFogfv(GL_FOG_COLOR, fog_color);
+
+    // set fog hint preference as ``don't care``
+    glHint(GL_FOG_HINT, GL_DONT_CARE);
+
+    // specify the equation used to compute the blending factor
+    glFogi(GL_FOG_MODE, GL_LINEAR);
+
+    // set fog start and end distance
+    glFogf(GL_FOG_START, 20.0f);
+    glFogf(GL_FOG_END, 60.0f);
 }
 
 
