@@ -73,6 +73,9 @@ int main(void)
         glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // enable culling (meaning that the program won't render unseen polygons)
+        glEnable(GL_CULL_FACE);
+
         // swap buffers
         glfwSwapBuffers(window);
 
