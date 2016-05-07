@@ -76,6 +76,10 @@ int main(void)
         // enable culling (meaning that the program won't render unseen polygons)
         glEnable(GL_CULL_FACE);
 
+        // set texture min/magnification filters to nearest
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
         // swap buffers
         glfwSwapBuffers(window);
 
