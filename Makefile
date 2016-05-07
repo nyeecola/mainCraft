@@ -2,7 +2,7 @@ compile:
 	gcc -c main.c
 
 link:
-	gcc *.o -o mainCraft.run -lglfw -lGL
+	gcc main.o -o mainCraft.run -lglfw -lGL
 
 run:
 	./mainCraft.run
