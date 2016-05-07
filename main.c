@@ -3,6 +3,13 @@
 #include <stdio.h>
 
 
+/* constants */
+const float SKY_COLOR_RED = 0.5f;
+const float SKY_COLOR_GREEN = 0.69f;
+const float SKY_COLOR_BLUE = 1;
+const float SKY_COLOR_ALPHA = 1;
+
+
 /* callback for error events */
 static void error_callback(int error, const char* description)
 {
@@ -61,6 +68,9 @@ int main(void)
         // handle screen resize
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
+
+        // fill sky with color
+        glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // swap buffers
