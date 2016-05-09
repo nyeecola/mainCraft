@@ -105,7 +105,6 @@ int main(void) {
     // main program loop
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
         int width, height;
 
         // handle screen resize
