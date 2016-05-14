@@ -3,11 +3,22 @@
 #include <stdio.h>
 
 
-/* constants */
+/* sky color */
 const float SKY_COLOR_RED = 0.5f;
 const float SKY_COLOR_GREEN = 0.69f;
 const float SKY_COLOR_BLUE = 1;
 const float SKY_COLOR_ALPHA = 1;
+
+/* world options */
+const int STEP_SIZE = 1;
+const int WORLD_HEIGHT = 160;
+
+
+/* adds a block to the world */
+static void add_block(int x, int y, int z, int tx, int ty, int tz, char immediate) {
+
+    // TODO: add block
+}
 
 
 /* draws on screen */
@@ -23,6 +34,20 @@ static void error_callback(int error, const char* description) {
 
     // log error
     fputs(description, stderr);
+}
+
+
+/* initializes the world */
+static void initializeWorld() {
+
+    // initial y height
+    int x, y = 0, z;
+
+    for (x = -WORLD_HEIGHT / 2; x < (WORLD_HEIGHT / 2) + 1; x++) {
+        for (z = -WORLD_HEIGHT / 2; z < (WORLD_HEIGHT / 2) + 1; z++) {
+            // TODO: create a layer of stone and grass everywhere
+        }
+    }
 }
 
 
@@ -101,6 +126,9 @@ int main(void) {
 
     // configure opengl preferences
     setup();
+
+    // initialize world
+    initializeWorld();
 
     // main program loop
     while (!glfwWindowShouldClose(window))
