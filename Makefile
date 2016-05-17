@@ -1,3 +1,6 @@
+asm:
+	gcc -S main.c
+
 compile:
 	gcc -c main.c
 
