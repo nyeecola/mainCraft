@@ -32,5 +32,6 @@
 # Debug files
 *.dSYM/
 
-# Vim plugin files
+# Vim files
+*.swp
 *.ycm*
