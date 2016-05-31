@@ -1,4 +1,5 @@
 #include <GLFW/glfw3.h>
+#include <FTGL/ftgl.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -8,10 +9,48 @@ const float SKY_COLOR_RED = 0.5f;
 const float SKY_COLOR_GREEN = 0.69f;
 const float SKY_COLOR_BLUE = 1;
 const float SKY_COLOR_ALPHA = 1;
+const float SCREEN_WIDTH = 640;
+const float SCREEN_HEIGHT = 480;
+const float FPS_COOLDOWN = 0.7;
+
+
+/* FPS counter */
+typedef struct FPS_ {
+    double timer;
+    double last_time;
+    double current_time;
+    double total_elapsed_time;
+    double num_frames;
+    char value[40];
+} FPS;
+
+
+/* get FPS */
+double calculateFPS(FPS *fps, double cooldown) {
+
+    fps->current_time = glfwGetTime();
+    double time_elapsed = fps->current_time - fps->last_time;
+    printf("%f\n", time_elapsed);
+    fps->last_time = fps->current_time;
+
+    fps->timer -= time_elapsed;
+    fps->total_elapsed_time += time_elapsed;
+    fps->num_frames++;
+
+    if (fps->timer <= 0) {
+        sprintf(fps->value, "%.02f", (float) (1 / (fps->total_elapsed_time / fps->num_frames)));
+        fps->timer = cooldown;
+        fps->total_elapsed_time = 0;
+        fps->num_frames = 0;
+    }
+}
 
 
 /* draws on screen */
 static void draw() {
+
+    // set background color (sky)
+    glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
 
     // fill sky with color
     glClear(GL_COLOR_BUFFER_BIT);
@@ -39,9 +78,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 static void setup () {
     GLfloat fog_color[4] = {SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA};
 
-    // set background color (sky)
-    glClearColor(SKY_COLOR_RED, SKY_COLOR_GREEN, SKY_COLOR_BLUE, SKY_COLOR_ALPHA);
-
     // enable culling (meaning that the program won't render unseen polygons)
     glEnable(GL_CULL_FACE);
 
@@ -50,7 +86,7 @@ static void setup () {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     // enable fog
-    glEnable(GL_FOG);
+    // glEnable(GL_FOG); -- TODO: find out why this causes a HUUUUGE fps drop when activated
 
     // set fog color
     glFogfv(GL_FOG_COLOR, fog_color);
@@ -81,7 +117,7 @@ int main(void) {
         exit(EXIT_FAILURE);
 
     // create window
-    window = glfwCreateWindow(640, 480, "mainCraft", NULL, NULL);
+    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "mainCraft", NULL, NULL);
 
     // if failed to create window: abort with failure
     if (!window)
@@ -90,11 +126,21 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    //Create a pixmap font from a TrueType file
+    FTGLfont* FPSfont = ftglCreatePixmapFont("./assets/fonts/Growly_Grin.ttf");
+
+    //Set size of font
+    ftglSetFontFaceSize(FPSfont, 50, 0);
+
+    //If something went wrong, bail out.
+    if(!FPSfont)
+        return -1;
+
     // set window as context
     glfwMakeContextCurrent(window);
 
-    // define buffer swap interval
-    glfwSwapInterval(1);
+    // define vsync (1 = on, 0 = off)
+    glfwSwapInterval(0);
 
     // set key callback
     glfwSetKeyCallback(window, key_callback);
@@ -102,17 +148,42 @@ int main(void) {
     // configure opengl preferences
     setup();
 
+    // create and initialize FPS counter data
+    FPS fps;
+    fps.timer = 0;
+    fps.last_time = 0;
+    fps.current_time = 0;
+    fps.total_elapsed_time = 0;
+    fps.num_frames = 0;
+
     // main program loop
     while (!glfwWindowShouldClose(window))
     {
         int width, height;
 
+        // calculate fps
+        calculateFPS(&fps, FPS_COOLDOWN);
+
+        // TODO: should this really run every frame?
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(-1, 1, -1, 1, -1 , 1);
+
         // handle screen resize
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
 
+        // set modelview -- TODO: learn more about this
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glOrtho(-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2, -SCREEN_HEIGHT / 2, SCREEN_HEIGHT / 2, -1 , 1);
+
         // draw
         draw();
+
+        // display fps at the top left
+        glRasterPos2f(-SCREEN_WIDTH / 2, 200);
+        ftglRenderFont(FPSfont, fps.value, FTGL_RENDER_ALL);
 
         // swap buffers
         glfwSwapBuffers(window);
@@ -120,6 +191,9 @@ int main(void) {
         // handle events
         glfwPollEvents();
     }
+
+    //Destroy the font object.
+    ftglDestroyFont(FPSfont);
 
     // destroy window
     glfwDestroyWindow(window);
