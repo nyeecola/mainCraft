@@ -30,7 +30,6 @@ double calculateFPS(FPS *fps, double cooldown) {
 
     fps->current_time = glfwGetTime();
     double time_elapsed = fps->current_time - fps->last_time;
-    printf("%f\n", time_elapsed);
     fps->last_time = fps->current_time;
 
     fps->timer -= time_elapsed;
@@ -86,7 +85,7 @@ static void setup () {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     // enable fog
-    // glEnable(GL_FOG); -- TODO: find out why this causes a HUUUUGE fps drop when activated
+    // glEnable(GL_FOG); // TODO: find out why this causes a HUUUUGE fps drop when activated
 
     // set fog color
     glFogfv(GL_FOG_COLOR, fog_color);
@@ -176,13 +175,14 @@ int main(void) {
         // set modelview -- TODO: learn more about this
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        glOrtho(-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2, -SCREEN_HEIGHT / 2, SCREEN_HEIGHT / 2, -1 , 1);
+        glOrtho(-width / 2, width / 2, -height / 2, height / 2, -1 , 1);
 
         // draw
         draw();
 
         // display fps at the top left
-        glRasterPos2f(-SCREEN_WIDTH / 2, 200);
+        printf("%d\n", height);
+        glRasterPos2f(-width / 2, height / 2 - 40);
         ftglRenderFont(FPSfont, fps.value, FTGL_RENDER_ALL);
 
         // swap buffers
