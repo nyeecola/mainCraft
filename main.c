@@ -112,6 +112,11 @@ void setup()
 int
 main(void)
 {
+	int status = EXIT_FAILURE;
+
+	// create and initialize FPS counter data
+	FPS fps = {};
+
 	// define window
 	GLFWwindow* window;
 
@@ -120,26 +125,12 @@ main(void)
 
 	// try to initialize glfw, abort on failure
 	if (!glfwInit())
-		exit(EXIT_FAILURE);
+		goto exit_program;
 
 	// create window
 	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "mainCraft", NULL, NULL);
-
-	// if failed to create window: abort with failure
-	if (!window) {
-		glfwTerminate();
-		exit(EXIT_FAILURE);
-	}
-
-	//Create a pixmap font from a TrueType file
-	FTGLfont* FPSfont = ftglCreatePixmapFont("./assets/fonts/Growly_Grin.ttf");
-
-	//Set size of font
-	ftglSetFontFaceSize(FPSfont, 50, 0);
-
-	//If something went wrong, bail out.
-	if (!FPSfont)
-		return -1;
+	if (!window)
+		goto terminate_glfw;
 
 	// set window as context
 	glfwMakeContextCurrent(window);
@@ -148,18 +139,21 @@ main(void)
 	glfwSwapInterval(0);
 
 	// set key callback
-	glfwSetKeyCallback(window, key_callback);
+	if(glfwSetKeyCallback(window, key_callback))
+		goto destroy_window;
 
 	// configure opengl preferences
 	setup();
 
-	// create and initialize FPS counter data
-	FPS fps;
-	fps.timer = 0;
-	fps.last_time = 0;
-	fps.current_time = 0;
-	fps.total_elapsed_time = 0;
-	fps.num_frames = 0;
+	//Create a pixmap font from a TrueType file
+	FTGLfont* FPSfont = ftglCreatePixmapFont("./assets/fonts/Growly_Grin.ttf");
+	if (!FPSfont)
+		goto destroy_window;
+
+	//Set size of font
+	if (!ftglSetFontFaceSize(FPSfont, 50, 0))
+		goto destroy_font;
+
 
 	// main program loop
 	while (!glfwWindowShouldClose(window)) {
@@ -197,15 +191,15 @@ main(void)
 		glfwPollEvents();
 	}
 
-	//Destroy the font object.
-	ftglDestroyFont(FPSfont);
-
-	// destroy window
-	glfwDestroyWindow(window);
-
-	// terminate glfw
-	glfwTerminate();
-
 	// exit with success
-	exit(EXIT_SUCCESS);
+	status = EXIT_SUCCESS;
+
+destroy_font:
+	ftglDestroyFont(FPSfont);
+destroy_window:
+	glfwDestroyWindow(window);
+terminate_glfw:
+	glfwTerminate();
+exit_program:
+	exit(status);
 }
