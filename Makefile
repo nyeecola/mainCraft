@@ -1,17 +1,20 @@
-asm:
-	gcc -S main.c
+HEADERS = opengl/gl_backend.h opengl/extras.h common/input.h
+SOURCES = main.c opengl/gl_backend.c opengl/extras.c common/input.c
+LIBS = -lftgl -lGL -lglfw
+INCLUDES = -I opengl -I common -I /usr/include/freetype2
 
-compile:
-	gcc -c main.c -I/usr/include/freetype2
+all: compile
 
-link:
-	gcc main.o -o mainCraft.run -lglfw -lGL -lftgl
+asm: $(HEADERS) $(SOURCES)
+	$(CC) -S $(SOURCES) $(INCLUDES) $(LIBS)
 
-run:
+compile: $(HEADERS) $(SOURCES)
+	$(CC) $(SOURCES) $(INCLUDES) $(LIBS) -o mainCraft.run
+
+run: mainCraft.run
 	./mainCraft.run
 
 clean:
 	rm *.o
+	rm *.s
 	rm mainCraft.run
-
-all: compile link
