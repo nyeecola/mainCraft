@@ -1,19 +1,8 @@
 #ifndef GL_BACKEND_H
 #define GL_BACKEND_H
 
-#include <GL/glx.h>
-#include <GLFW/glfw3.h>
 
 int
-setup();
-
-GLFWwindow *
-init_window();
-
-void
-destroy_window(GLFWwindow *window);
-
-int
-main_loop(GLFWwindow *window);
+run_gl(const int argc, char *const *argv);
 
 #endif //GL_BACKEND_H
