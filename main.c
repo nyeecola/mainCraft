@@ -1,9 +1,11 @@
-#include <GLFW/glfw3.h>
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "gl_backend.h"
+#include "vk_backend.h"
+
 
 #define HELP_MESSAGE \
     "Usage:\tmainCraft.run --backend vulkan\n" \
@@ -26,7 +28,6 @@ enum backend_type { vulkan, opengl };
 int
 main(const int argc, char *const *argv)
 {
-	int exit_status = EXIT_FAILURE;
 	enum backend_type backend = opengl;
 	struct option longOptions[] = LONG_OPTIONS;
 	int option = 0;
@@ -40,33 +41,23 @@ main(const int argc, char *const *argv)
 				backend = opengl;
 			else {
 				fprintf(stderr, "'%s' is no a valid backend\n", optarg);
-				goto exit_program;
+				exit(EXIT_FAILURE);
 			}
 			break;
 		case 'h':
 			printf(HELP_MESSAGE);
-			exit_status = EXIT_SUCCESS;
-			goto exit_program;
+			exit(EXIT_SUCCESS);
 		case '?':
 			// flush opt message
 			fflush(stderr);
 			printf("Try --help\n");
-			goto exit_program;
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	GLFWwindow *window = init_window();
-	if (!window)
-		goto destroy_window;
-
-	// Setup graphics infrastructure
-	setup();
-
-	if (!main_loop(window))
-		exit_status = EXIT_SUCCESS;
-
-destroy_window:
-	destroy_window(window);
-exit_program:
-	exit(exit_status);
+	if (backend == opengl)
+		exit(run_gl(argc, argv));
+	else
+		exit(run_vk(argc, argv));
 }
+

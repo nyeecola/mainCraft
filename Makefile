@@ -1,7 +1,7 @@
-HEADERS = opengl/gl_backend.h opengl/extras.h common/input.h
-SOURCES = main.c opengl/gl_backend.c opengl/extras.c common/input.c
-LIBS = -lftgl -lGL -lglfw
-INCLUDES = -I opengl -I common -I /usr/include/freetype2
+HEADERS = opengl/gl_backend.h opengl/extras.h common/input.h vulkan/vk_backend.h
+SOURCES = main.c opengl/gl_backend.c opengl/extras.c common/input.c vulkan/vk_backend.c
+LIBS = -lftgl -lGL -lglfw -lvulkan
+INCLUDES = -I opengl -I vulkan -I common -I /usr/include/freetype2
 
 all: compile
 
