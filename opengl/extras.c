@@ -1,7 +1,7 @@
 #include "extras.h"
 
 double
-calculate_FPS(FPS *fps, double cooldown)
+calculate_FPS(struct FPS *fps, double cooldown)
 {
 	fps->current_time = glfwGetTime();
 	double time_elapsed = fps->current_time - fps->last_time;

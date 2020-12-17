@@ -13,7 +13,7 @@ const float FPS_COOLDOWN = 0.7;
 
 // TODO: Find a better place to these variables
 // create and initialize FPS counter data
-FPS fps = {};
+struct FPS fps = {};
 FTGLfont *FPSfont;
 
 /* draws on screen */

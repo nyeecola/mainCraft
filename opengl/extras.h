@@ -6,17 +6,17 @@
 #include <stdio.h>
 
 /* FPS counter */
-typedef struct FPS_ {
+struct FPS {
 	double timer;
 	double last_time;
 	double current_time;
 	double total_elapsed_time;
 	double num_frames;
 	char value[40];
-} FPS;
+};
 
 /* get FPS */
 double
-calculate_FPS(FPS *fps, double cooldown);
+calculate_FPS(struct FPS *fps, double cooldown);
 
 #endif //EXTRAS_H
