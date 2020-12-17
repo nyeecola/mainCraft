@@ -1,6 +1,9 @@
+#include <GLFW/glfw3.h>
+#include <GL/glx.h>
+
+#include "gl_backend.h"
 #include "input.h"
 #include "extras.h"
-#include "gl_backend.h"
 
 /* constants */
 const float SKY_COLOR_RED = 0.5f;
@@ -155,3 +158,25 @@ destroy_window(GLFWwindow *window)
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }
+
+int
+run_gl(const int argc, char *const *argv)
+{
+	int exit_status = EXIT_FAILURE;
+	GLFWwindow *window = init_window();
+
+	if (!window)
+		goto exit_program;
+
+	// Setup graphics infrastructure
+	setup();
+
+	if (!main_loop(window))
+		exit_status = EXIT_SUCCESS;
+
+destroy_window:
+	destroy_window(window);
+exit_program:
+	return exit_status;
+}
+
