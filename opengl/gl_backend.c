@@ -2,16 +2,11 @@
 #include <GL/glx.h>
 
 #include "gl_backend.h"
+#include "constants.h"
 #include "input.h"
 #include "extras.h"
 
-/* constants */
-const float SKY_COLOR_RED = 0.5f;
-const float SKY_COLOR_GREEN = 0.69f;
-const float SKY_COLOR_BLUE = 1;
-const float SKY_COLOR_ALPHA = 1;
-const float SCREEN_WIDTH = 640;
-const float SCREEN_HEIGHT = 480;
+/* constant */
 const float FPS_COOLDOWN = 0.7;
 
 // TODO: Find a better place to these variables
