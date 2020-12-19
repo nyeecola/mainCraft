@@ -6,6 +6,8 @@
 #include <vulkan/vulkan.h>
 
 struct vk_program {
+	GLFWwindow *window;
+	VkSurfaceKHR surface;
 	VkApplicationInfo app_info;
 	VkInstance instance;
 };
