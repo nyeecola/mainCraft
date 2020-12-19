@@ -139,7 +139,6 @@ init_window()
 	if(!glfwSetKeyCallback(window, key_callback))
 		return window;
 
-destroy_window:
 	glfwDestroyWindow(window);
 terminate_glfw:
 	glfwTerminate();
@@ -169,7 +168,6 @@ run_gl(const int argc, char *const *argv)
 	if (!main_loop(window))
 		exit_status = EXIT_SUCCESS;
 
-destroy_window:
 	destroy_window(window);
 exit_program:
 	return exit_status;
