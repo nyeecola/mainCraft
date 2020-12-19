@@ -16,7 +16,7 @@ struct FPS {
 };
 
 /* get FPS */
-double
+void
 calculate_FPS(struct FPS *fps, double cooldown);
 
 #endif //EXTRAS_H

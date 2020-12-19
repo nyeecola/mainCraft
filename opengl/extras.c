@@ -1,6 +1,6 @@
 #include "extras.h"
 
-double
+void
 calculate_FPS(struct FPS *fps, double cooldown)
 {
 	fps->current_time = glfwGetTime();
