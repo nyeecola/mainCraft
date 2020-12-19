@@ -8,18 +8,18 @@ vk_init_window()
 	// define window
 	GLFWwindow* window;
 
+	// try to initialize glfw, abort on failure
+	if (!glfwInit())
+		goto return_null;
+
 	// Tell to glfw to not create a OpenGL/OpenGL ES context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	// set error callback
 	glfwSetErrorCallback(error_callback);
 
-	// try to initialize glfw, abort on failure
-	if (!glfwInit())
-		goto return_null;
-
 	// create window
-	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "mainCraft", NULL, NULL);
+	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Main Craft", NULL, NULL);
 	if (!window)
 		goto terminate_glfw;
 
@@ -27,7 +27,6 @@ vk_init_window()
 	if(!glfwSetKeyCallback(window, key_callback))
 		return window;
 
-destroy_window:
 	glfwDestroyWindow(window);
 terminate_glfw:
 	glfwTerminate();
