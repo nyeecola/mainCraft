@@ -19,7 +19,7 @@ find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, 
 
 	queue_family = malloc(sizeof(VkQueueFamilyProperties) * queues_count);
 	if (!queue_family) {
-		fprintf(stderr, "Error: Failed to allocate queue_family vector!\n");
+		print_error("Failed to allocate queue_family vector!");
 		return -1;
 	}
 
@@ -68,7 +68,7 @@ check_device_extension_support(VkPhysicalDevice physical_device)
 	vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
 	available_extensions = malloc(sizeof(VkExtensionProperties) * extension_count);
 	if (!available_extensions) {
-		fprintf(stderr, "Error: failed while probing device extentions\n");
+		print_error("failed while probing device extentions");
 		ret = false;
 		goto return_value;
 	}
@@ -122,13 +122,13 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 
 	vkEnumeratePhysicalDevices(instance, &device_count, NULL);
 	if (device_count == 0) {
-		fprintf(stderr, "Error: failed to find GPUs with Vulkan support!\n");
+		print_error("Failed to find GPUs with Vulkan support!");
 		goto return_error;
 	}
 
 	devices = malloc(sizeof(VkPhysicalDevice) * device_count);
 	if (!devices) {
-		fprintf(stderr, "Error: failed while allocating physical device vector!\n");
+		print_error("Failed while allocating physical device vector!");
 		goto return_error;
 	}
 
@@ -141,7 +141,7 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 		}
 
 	if (ret)
-		fprintf(stderr, "Error: Failed to find a suitable GPU!\n");
+		print_error("Failed to find a suitable GPU!");
 
 	free(devices);
 return_error:
@@ -190,7 +190,7 @@ create_logical_device(struct vk_device *device)
 	}
 
 	if (vkCreateDevice(device->physical_device , &create_info, NULL, &device->logical_device) != VK_SUCCESS) {
-		fprintf(stderr, "Error: Failed to create logical device!\n");
+		print_error("Failed to create logical device!");
 		return -1;
 	}
 

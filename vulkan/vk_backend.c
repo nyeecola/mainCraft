@@ -16,7 +16,7 @@ init_vk(struct vk_program *program)
 		goto exit_error;
 
 	if (glfwCreateWindowSurface(program->instance, program->window, NULL, &program->surface) != VK_SUCCESS) {
-		fprintf(stderr, "Error: Failed to create a Window surface!\n");
+		print_error("Failed to create a Window surface!");
 		goto destroy_instance;
 	}
 
