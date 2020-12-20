@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "vk_types.h"
-#include "utils.h"
+
 
 int
 find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, VkSurfaceKHR surface);
@@ -18,5 +18,8 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 
 int
 pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR surface);
+
+int
+create_logical_device(struct vk_device *device);
 
 #endif //VK_LOGICAL_DEVICE_H

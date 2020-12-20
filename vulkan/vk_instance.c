@@ -4,12 +4,10 @@
 #include <stdio.h>
 
 #include "vk_instance.h"
+#include "vk_constants.h"
 #include "utils.h"
 
-const char *validation_layers[1] = {
-	"VK_LAYER_KHRONOS_validation"
-};
-
+/* This function check if all validation layers are available and return a boolean */
 bool checkValidationLayerSupport() {
 	VkLayerProperties *available_layers;
 	uint32_t layer_count, i, j;

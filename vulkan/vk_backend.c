@@ -23,6 +23,9 @@ init_vk(struct vk_program *program)
 	if (pick_physical_device(program->instance, &program->device, program->surface))
 		goto destroy_surface;
 
+	if (create_logical_device(&program->device))
+		goto destroy_surface;
+
 	return 0;
 
 destroy_surface:
@@ -36,6 +39,7 @@ exit_error:
 void
 vk_cleanup(struct vk_program program)
 {
+	vkDestroyDevice(program.device.logical_device, NULL);
 	vkDestroySurfaceKHR(program.instance, program.surface, NULL);
 	vkDestroyInstance(program.instance, NULL);
 }
