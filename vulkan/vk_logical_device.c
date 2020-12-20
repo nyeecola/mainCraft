@@ -4,11 +4,9 @@
 #include <stdio.h>
 
 #include "vk_logical_device.h"
+#include "vk_constants.h"
+#include "utils.h"
 
-// Extentions necessary by this program
-const char *device_extensions[1] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
 
 int
 find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, VkSurfaceKHR surface)
@@ -148,4 +146,66 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 	free(devices);
 return_error:
 	return ret;
+}
+
+int
+create_logical_device(struct vk_device *device)
+{
+	uint64_t unique_queue_families[queues_count], i, unique_family_count = 0;
+	VkDeviceQueueCreateInfo queue_create_infos[queues_count];
+	const struct vk_queues *queues_index = &device->queues;
+	const float queue_priority = 1.0f;
+
+	/* Because we already verified it in `find_queue_families()` we don't need check
+	 * if this GPU have a Graphics/Present queue
+	 */
+	unique_queue_families[unique_family_count++] = queues_index->family_indices[graphics];
+	if (queues_index->family_indices[present] != queues_index->family_indices[graphics])
+		unique_queue_families[unique_family_count++] = queues_index->family_indices[present];
+	if (queues_index->queue_count[transfer])
+		unique_queue_families[unique_family_count++] = queues_index->family_indices[transfer];
+
+	for (i = 0; i < unique_family_count; i++) {
+		VkDeviceQueueCreateInfo queue_create_info = {
+			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+			.queueFamilyIndex = unique_queue_families[i],
+			// If we want mutiple queues we need change this
+			.queueCount = 1,
+			.pQueuePriorities = &queue_priority,
+		};
+		queue_create_infos[i] = queue_create_info;
+	}
+
+	VkDeviceCreateInfo create_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.pQueueCreateInfos = queue_create_infos,
+		.queueCreateInfoCount = unique_family_count,
+		.enabledExtensionCount = array_size(device_extensions),
+		.ppEnabledExtensionNames = device_extensions,
+	};
+
+	if (enable_validation_layers) {
+		create_info.enabledLayerCount = array_size(validation_layers);
+		create_info.ppEnabledLayerNames = validation_layers;
+	}
+
+	if (vkCreateDevice(device->physical_device , &create_info, NULL, &device->logical_device) != VK_SUCCESS) {
+		fprintf(stderr, "Error: Failed to create logical device!\n");
+		return -1;
+	}
+
+	// And the retrieve the queues
+	vkGetDeviceQueue(device->logical_device, queues_index->family_indices[graphics],
+					 0, &device->queues.handles[graphics]);
+	device->queues.queue_count[graphics] = 1;
+	vkGetDeviceQueue(device->logical_device, queues_index->family_indices[present],
+					 0, &device->queues.handles[present]);
+	device->queues.queue_count[present] = 1;
+	if (queues_index->queue_count[transfer]) {
+		vkGetDeviceQueue(device->logical_device, queues_index->family_indices[transfer],
+						 0, &device->queues.handles[transfer]);
+		device->queues.queue_count[transfer] = 1;
+	}
+
+	return 0;
 }
