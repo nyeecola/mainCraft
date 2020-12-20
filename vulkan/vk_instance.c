@@ -17,7 +17,7 @@ bool checkValidationLayerSupport() {
 
 	available_layers = malloc(sizeof(VkLayerProperties) * layer_count);
 	if (!available_layers) {
-		fprintf(stderr, "Error: Failed while quering Vulkan layers!\n");
+		print_error("Failed while quering Vulkan layers!");
 		return false;
 	}
 
@@ -51,7 +51,7 @@ create_instance(VkApplicationInfo *app_info)
 	const char **glfw_extensions;
 
 	if (enable_validation_layers && !checkValidationLayerSupport())
-		fprintf(stderr, "Error: Not all validation layers requested are available!\n");
+		print_error("Not all validation layers requested are available!");
 
 	VkInstanceCreateInfo create_info = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -69,7 +69,7 @@ create_instance(VkApplicationInfo *app_info)
 		create_info.enabledLayerCount = 0;
 
 	if (vkCreateInstance(&create_info, NULL, &instance) != VK_SUCCESS) {
-		fprintf(stderr, "Error: Failed to create a Vulkan instance!\n");
+		print_error("Failed to create a Vulkan instance!");
 		return NULL;
 	}
 
