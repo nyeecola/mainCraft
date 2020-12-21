@@ -8,6 +8,18 @@
 
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
 
+struct surface_support {
+	VkSurfaceCapabilitiesKHR capabilities;
+	VkSurfaceFormatKHR *formats;
+	uint32_t formats_count;
+	VkPresentModeKHR *present_modes;
+	uint32_t present_modes_count;
+};
+
+struct vk_swapchain {
+	struct surface_support support;
+};
+
 struct vk_queues {
 	uint32_t family_indices[queues_count];
 	uint32_t queue_count[queues_count];
@@ -20,6 +32,7 @@ struct vk_device {
 	VkPhysicalDevice physical_device;
 	VkDevice logical_device;
 	struct vk_queues queues;
+	struct vk_swapchain swapchain;
 };
 
 struct vk_program {
