@@ -22,4 +22,7 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 int
 create_logical_device(struct vk_device *device);
 
+void
+surface_support_cleanup(struct surface_support *surface_support);
+
 #endif //VK_LOGICAL_DEVICE_H

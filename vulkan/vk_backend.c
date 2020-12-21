@@ -24,10 +24,12 @@ init_vk(struct vk_program *program)
 		goto destroy_surface;
 
 	if (create_logical_device(&program->device))
-		goto destroy_surface;
+		goto destroy_surface_support;
 
 	return 0;
 
+destroy_surface_support:
+	surface_support_cleanup(&program->device.swapchain.support);
 destroy_surface:
 	vkDestroySurfaceKHR(program->instance, program->surface, NULL);
 destroy_instance:
@@ -39,6 +41,7 @@ exit_error:
 void
 vk_cleanup(struct vk_program program)
 {
+	surface_support_cleanup(&program.device.swapchain.support);
 	vkDestroyDevice(program.device.logical_device, NULL);
 	vkDestroySurfaceKHR(program.instance, program.surface, NULL);
 	vkDestroyInstance(program.instance, NULL);

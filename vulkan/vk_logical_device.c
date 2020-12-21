@@ -89,26 +89,83 @@ return_value:
 	return ret;
 }
 
+int
+query_surface_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface, struct surface_support *surface_support)
+{
+	uint32_t formats_count, present_mode_count;
+	surface_support->formats_count = surface_support->present_modes_count = 0;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_support->capabilities);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, NULL);
+
+	if (formats_count) {
+		surface_support->formats = malloc(sizeof(VkSurfaceFormatKHR) * formats_count);
+		if (!surface_support->formats) {
+			print_error("Failed while recovering physical Device surface formats!");
+			return -1;
+		}
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, surface_support->formats);
+		surface_support->formats_count = formats_count;
+	}
+
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
+	if (present_mode_count) {
+		surface_support->present_modes = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
+		if (!surface_support->present_modes) {
+			print_error("Failed while recovering physical Device surface Present Modes!");
+			return -1;
+		}
+		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
+												  surface_support->present_modes);
+		surface_support->present_modes_count = present_mode_count;
+	}
+
+	return 0;
+}
+
+void
+surface_support_cleanup(struct surface_support *surface_support)
+{
+	if (surface_support->formats_count)
+		free(surface_support->formats);
+	if (surface_support->present_modes_count)
+		free(surface_support->present_modes);
+
+	surface_support->formats_count = surface_support->present_modes_count = 0;
+	surface_support->formats = NULL;
+	surface_support->present_modes = NULL;
+}
+
 bool
 is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_device, VkSurfaceKHR surface)
 {
 	bool extensions_supported = check_device_extension_support(physical_device);
 	struct vk_queues queues = { };
+	struct surface_support surface_support = { };
 
 	if (!extensions_supported)
 		goto return_false;
 
-	if (find_queue_families(physical_device, &queues, surface))
+	if (query_surface_support(physical_device, surface, &surface_support))
 		goto return_false;
 
+	if (!surface_support.formats_count || !surface_support.present_modes_count)
+		goto surface_support_cleanup;
+
+	if (find_queue_families(physical_device, &queues, surface))
+		goto surface_support_cleanup;
+
 	if (!queues.queue_count[graphics] || !queues.queue_count[present])
-		goto return_false;
+		goto surface_support_cleanup;
 
 	picked_device->physical_device = physical_device;
 	picked_device->queues = queues;
+	picked_device->swapchain.support = surface_support;
 
 	return true;
 
+surface_support_cleanup:
+	surface_support_cleanup(&surface_support);
 return_false:
 	return false;
 }
