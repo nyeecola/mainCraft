@@ -16,7 +16,17 @@ struct surface_support {
 	uint32_t present_modes_count;
 };
 
+struct swapchain_info {
+	VkSurfaceFormatKHR surface_format;
+	VkPresentModeKHR present_mode;
+	VkExtent2D extent;
+};
+
 struct vk_swapchain {
+	VkSwapchainKHR handle;
+	VkImage* images;
+	uint32_t images_count;
+	struct swapchain_info state;
 	struct surface_support support;
 };
 

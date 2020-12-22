@@ -4,6 +4,7 @@
 #include "vk_logical_device.h"
 #include "vk_instance.h"
 #include "vk_backend.h"
+#include "vk_swapchain.h"
 #include "vk_window.h"
 #include "utils.h"
 
@@ -26,8 +27,13 @@ init_vk(struct vk_program *program)
 	if (create_logical_device(&program->device))
 		goto destroy_surface_support;
 
+	if (create_swapchain(&program->device, program->surface, program->window))
+		goto destroy_device;
+
 	return 0;
 
+destroy_device:
+	vkDestroyDevice(program->device.logical_device, NULL);
 destroy_surface_support:
 	surface_support_cleanup(&program->device.swapchain.support);
 destroy_surface:
@@ -41,6 +47,7 @@ exit_error:
 void
 vk_cleanup(struct vk_program program)
 {
+	vkDestroySwapchainKHR(program.device.logical_device, program.device.swapchain.handle, NULL);
 	surface_support_cleanup(&program.device.swapchain.support);
 	vkDestroyDevice(program.device.logical_device, NULL);
 	vkDestroySurfaceKHR(program.instance, program.surface, NULL);
