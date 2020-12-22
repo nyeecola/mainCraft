@@ -1,29 +1,36 @@
-HEADERS = opengl/gl_backend.h opengl/extras.h \
-		  vulkan/vk_backend.h vulkan/vk_window.h vulkan/vk_instance.h vulkan/vk_logical_device.h vulkan/vk_constants.c \
-		  vulkan/vk_swapchain.h vulkan/vk_types.h vulkan/vk_constants.h \
-		  common/input.h common/utils.h common/constants.h
-SOURCES = opengl/gl_backend.c opengl/extras.c \
-		  vulkan/vk_backend.c vulkan/vk_window.c vulkan/vk_instance.c vulkan/vk_logical_device.c vulkan/vk_constants.c vulkan/vk_swapchain.c \
-		  common/input.c main.c
-LIBS = -lftgl -lGL -lglfw -lvulkan
-INCLUDES = -I opengl -I vulkan -I common -I /usr/include/freetype2
-CFLAGS := -Wall
+TARGET_EXEC ?= mainCraft.run
+
+PROJ_DIRS ?= opengl vulkan common
+SOURCES := $(wildcard $(addsuffix /*.c,$(PROJ_DIRS))) main.c
+
+HEADER_DIRS += $(PROJ_DIRS) /usr/include/freetype2/
+INCLUDES += $(addprefix -I,$(HEADER_DIRS))
+
+LIB_NAMES ?= ftgl GL glfw vulkan
+LD_LIBS += $(addprefix -l,$(LIB_NAMES))
+
+CFLAGS += -Wall
+
+ifeq (${XDG_SESSION_TYPE}, wayland)
+	MACROS += -D GLFW_USE_WAYLAND=ON
+endif
 
 all: compile
 
-asm: $(HEADERS) $(SOURCES)
-	$(CC) -S $(SOURCES) $(INCLUDES) $(LIBS)
+asm: $(SOURCES)
+	$(CC) -S $^ $(INCLUDES) $(LD_LIBS)
 
-compile: $(HEADERS) $(SOURCES)
-	$(CC) $(CFLAGS) $(SOURCES) $(INCLUDES) $(LIBS) -o mainCraft.run
+compile: $(SOURCES)
+	$(CC) $(CFLAGS) $^ $(INCLUDES) $(LD_LIBS) -o $(TARGET_EXEC) $(MACROS)
 
-debug: $(HEADERS) $(SOURCES)
-	$(CC) $(CFLAGS) -ggdb3 -Og $(SOURCES) $(INCLUDES) $(LIBS) -o mainCraft.run -D ENABLE_VALIDATION_LAYERS
+debug: CFLAGS += -ggdb3 -Og -fstack-protector-all -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+debug: compile
 
-run: mainCraft.run
-	./mainCraft.run
+debug_vk: MACROS += -D ENABLE_VALIDATION_LAYERS
+debug_vk: debug
+
+run: $(TARGET_EXEC)
+	./$(TARGET_EXEC)
 
 clean:
-	rm *.o
-	rm *.s
-	rm mainCraft.run
+	$(RM) *.o *.s $(TARGET_EXEC)
