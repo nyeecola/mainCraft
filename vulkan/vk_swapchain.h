@@ -6,4 +6,10 @@
 int
 create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *window);
 
+int
+create_image_views(VkDevice logical_device, struct vk_swapchain *swapchain);
+
+void
+image_views_cleanup(VkDevice logical_device, struct vk_swapchain swapchain);
+
 #endif //VK_SWAP_CHAIN_H
