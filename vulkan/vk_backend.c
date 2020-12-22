@@ -30,8 +30,13 @@ init_vk(struct vk_program *program)
 	if (create_swapchain(&program->device, program->surface, program->window))
 		goto destroy_device;
 
+	if (create_image_views(program->device.logical_device, &program->device.swapchain))
+		goto destroy_swapchain;
+
 	return 0;
 
+destroy_swapchain:
+	vkDestroySwapchainKHR(program->device.logical_device, program->device.swapchain.handle, NULL);
 destroy_device:
 	vkDestroyDevice(program->device.logical_device, NULL);
 destroy_surface_support:
@@ -47,6 +52,7 @@ exit_error:
 void
 vk_cleanup(struct vk_program program)
 {
+	image_views_cleanup(program.device.logical_device, program.device.swapchain);
 	vkDestroySwapchainKHR(program.device.logical_device, program.device.swapchain.handle, NULL);
 	surface_support_cleanup(&program.device.swapchain.support);
 	vkDestroyDevice(program.device.logical_device, NULL);

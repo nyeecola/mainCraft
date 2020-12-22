@@ -24,6 +24,7 @@ struct swapchain_info {
 
 struct vk_swapchain {
 	VkSwapchainKHR handle;
+	VkImageView *image_views;
 	VkImage* images;
 	uint32_t images_count;
 	struct swapchain_info state;

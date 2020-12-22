@@ -121,3 +121,72 @@ create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *win
 
 	return 0;
 }
+
+VkImageView
+createImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags)
+{
+	VkImageView image_view;
+
+	VkImageViewCreateInfo view_info = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = image,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = format,
+		.components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+		.components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+		.components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+		.components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+		.subresourceRange.aspectMask = aspect_flags,
+		.subresourceRange.baseMipLevel = 0,
+		.subresourceRange.levelCount = 1,
+		.subresourceRange.baseArrayLayer = 0,
+		.subresourceRange.layerCount = 1
+	};
+
+	if (vkCreateImageView(logical_device, &view_info, NULL, &image_view) != VK_SUCCESS) {
+		print_error("Failed to create texture image view!");
+		return NULL;
+	}
+
+	return image_view;
+}
+
+int
+create_image_views(VkDevice logical_device, struct vk_swapchain *swapchain)
+{
+	int32_t i;
+
+	swapchain->image_views = malloc(sizeof(VkImageView) * swapchain->images_count);
+	if (!swapchain->image_views) {
+		print_error("Failed while allocating swapchain image views vector!");
+		return -1;
+	}
+
+	for (i = 0; i < swapchain->images_count; i++) {
+		swapchain->image_views[i] = createImageView(logical_device, swapchain->images[i],
+													swapchain->state.surface_format.format,
+													VK_IMAGE_ASPECT_COLOR_BIT);
+		if (!swapchain->image_views[i]) {
+			pprint_error("Failed to create %d/%u image view!", i, swapchain->images_count);
+			break;
+		}
+	}
+
+	if (i != swapchain->images_count) {
+		image_views_cleanup(logical_device, *swapchain);
+		return -1;
+	}
+
+	return 0;
+}
+
+void
+image_views_cleanup(VkDevice logical_device, struct vk_swapchain swapchain)
+{
+	int i;
+
+	for (i = 0; i < swapchain.images_count && swapchain.image_views[i]; i++)
+		vkDestroyImageView(logical_device, swapchain.image_views[i], NULL);
+
+	free(swapchain.image_views);
+}

@@ -5,6 +5,7 @@
 
 #include "gl_backend.h"
 #include "vk_backend.h"
+#include "utils.h"
 
 
 #define HELP_MESSAGE \
@@ -40,7 +41,7 @@ main(const int argc, char *const *argv)
 			else if (!strcmp(optarg, "opengl"))
 				backend = opengl;
 			else {
-				fprintf(stderr, "'%s' is no a valid backend\n", optarg);
+				pprint_error("'%s' is no a valid backend\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
