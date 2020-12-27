@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "vk_logical_device.h"
+#include "vk_command_buffer.h"
 #include "vk_instance.h"
 #include "vk_backend.h"
 #include "vk_swapchain.h"
@@ -35,8 +36,13 @@ init_vk(struct vk_program *program)
 	if (create_image_views(dev->logical_device, &dev->swapchain))
 		goto destroy_swapchain;
 
+	if (create_cmd_submission_infra(dev))
+		goto destroy_image_views;
+
 	return 0;
 
+destroy_image_views:
+	image_views_cleanup(dev->logical_device, dev->swapchain);
 destroy_swapchain:
 	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
 destroy_device:
@@ -56,6 +62,8 @@ vk_cleanup(struct vk_program program)
 {
 	struct vk_device *dev = &program.device;
 
+	cleanup_command_pools(dev->logical_device, dev->command_pools);
+	free_command_buffer_vector(dev->cmd_buffers);
 	image_views_cleanup(dev->logical_device, dev->swapchain);
 	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
 	surface_support_cleanup(&dev->swapchain.support);
