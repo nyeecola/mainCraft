@@ -6,7 +6,7 @@ SOURCES := $(wildcard $(addsuffix /*.c,$(PROJ_DIRS))) main.c
 HEADER_DIRS += $(PROJ_DIRS) /usr/include/freetype2/
 INCLUDES += $(addprefix -I,$(HEADER_DIRS))
 
-LIB_NAMES ?= ftgl GL glfw vulkan
+LIB_NAMES ?= ftgl GL glfw vulkan m
 LD_LIBS += $(addprefix -l,$(LIB_NAMES))
 
 CFLAGS += -Wall
