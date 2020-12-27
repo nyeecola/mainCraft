@@ -8,6 +8,10 @@
 
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
 
+struct vk_render {
+	VkRenderPass render_pass;
+};
+
 struct surface_support {
 	VkSurfaceCapabilitiesKHR capabilities;
 	VkSurfaceFormatKHR *formats;
@@ -48,6 +52,7 @@ struct vk_device {
 	VkCommandBuffer *cmd_buffers[queues_count];
 	uint32_t cmd_buffers_count[queues_count];
 	struct vk_swapchain swapchain;
+	struct vk_render render;
 };
 
 struct vk_program {
