@@ -6,6 +6,7 @@
 #include "vk_instance.h"
 #include "vk_backend.h"
 #include "vk_swapchain.h"
+#include "vk_render.h"
 #include "vk_window.h"
 #include "utils.h"
 
@@ -14,6 +15,7 @@ int
 init_vk(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
+	struct vk_render *render = &dev->render;
 
 	program->app_info = create_app_info();
 	if ((program->instance = create_instance(&program->app_info)) == NULL)
@@ -36,11 +38,17 @@ init_vk(struct vk_program *program)
 	if (create_image_views(dev->logical_device, &dev->swapchain))
 		goto destroy_swapchain;
 
-	if (create_cmd_submission_infra(dev))
+	render->render_pass = create_render_pass(dev->logical_device, dev->swapchain.state);
+	if (render->render_pass == VK_NULL_HANDLE)
 		goto destroy_image_views;
+
+	if (create_cmd_submission_infra(dev))
+		goto destroy_render_pass;
 
 	return 0;
 
+destroy_render_pass:
+	vkDestroyRenderPass(dev->logical_device, render->render_pass, NULL);
 destroy_image_views:
 	image_views_cleanup(dev->logical_device, dev->swapchain);
 destroy_swapchain:
@@ -64,6 +72,7 @@ vk_cleanup(struct vk_program program)
 
 	cleanup_command_pools(dev->logical_device, dev->command_pools);
 	free_command_buffer_vector(dev->cmd_buffers);
+	vkDestroyRenderPass(dev->logical_device, dev->render.render_pass, NULL);
 	image_views_cleanup(dev->logical_device, dev->swapchain);
 	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
 	surface_support_cleanup(&dev->swapchain.support);
