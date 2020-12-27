@@ -43,6 +43,10 @@ struct vk_device {
 	VkPhysicalDevice physical_device;
 	VkDevice logical_device;
 	struct vk_queues queues;
+	VkCommandPool command_pools[queues_count];
+	uint64_t pools_allocated;
+	VkCommandBuffer *cmd_buffers[queues_count];
+	uint32_t cmd_buffers_count[queues_count];
 	struct vk_swapchain swapchain;
 };
 
