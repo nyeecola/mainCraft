@@ -12,6 +12,8 @@
 int
 init_vk(struct vk_program *program)
 {
+	struct vk_device *dev = &program->device;
+
 	program->app_info = create_app_info();
 	if ((program->instance = create_instance(&program->app_info)) == NULL)
 		goto exit_error;
@@ -21,26 +23,26 @@ init_vk(struct vk_program *program)
 		goto destroy_instance;
 	}
 
-	if (pick_physical_device(program->instance, &program->device, program->surface))
+	if (pick_physical_device(program->instance, dev, program->surface))
 		goto destroy_surface;
 
-	if (create_logical_device(&program->device))
+	if (create_logical_device(dev))
 		goto destroy_surface_support;
 
-	if (create_swapchain(&program->device, program->surface, program->window))
+	if (create_swapchain(dev, program->surface, program->window))
 		goto destroy_device;
 
-	if (create_image_views(program->device.logical_device, &program->device.swapchain))
+	if (create_image_views(dev->logical_device, &dev->swapchain))
 		goto destroy_swapchain;
 
 	return 0;
 
 destroy_swapchain:
-	vkDestroySwapchainKHR(program->device.logical_device, program->device.swapchain.handle, NULL);
+	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
 destroy_device:
-	vkDestroyDevice(program->device.logical_device, NULL);
+	vkDestroyDevice(dev->logical_device, NULL);
 destroy_surface_support:
-	surface_support_cleanup(&program->device.swapchain.support);
+	surface_support_cleanup(&dev->swapchain.support);
 destroy_surface:
 	vkDestroySurfaceKHR(program->instance, program->surface, NULL);
 destroy_instance:
@@ -52,10 +54,12 @@ exit_error:
 void
 vk_cleanup(struct vk_program program)
 {
-	image_views_cleanup(program.device.logical_device, program.device.swapchain);
-	vkDestroySwapchainKHR(program.device.logical_device, program.device.swapchain.handle, NULL);
-	surface_support_cleanup(&program.device.swapchain.support);
-	vkDestroyDevice(program.device.logical_device, NULL);
+	struct vk_device *dev = &program.device;
+
+	image_views_cleanup(dev->logical_device, dev->swapchain);
+	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
+	surface_support_cleanup(&dev->swapchain.support);
+	vkDestroyDevice(dev->logical_device, NULL);
 	vkDestroySurfaceKHR(program.instance, program.surface, NULL);
 	vkDestroyInstance(program.instance, NULL);
 }
