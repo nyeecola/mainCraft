@@ -20,4 +20,7 @@ free_command_buffer_vector(VkCommandBuffer *cmd_buffers[]);
 int
 create_cmd_submission_infra(struct vk_device *device);
 
+int
+record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, struct vk_render *render);
+
 #endif //VK_COMMAND_BUFFER_H
