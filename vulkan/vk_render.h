@@ -7,4 +7,7 @@
 VkRenderPass
 create_render_pass(VkDevice logical_device, struct swapchain_info state);
 
+int
+create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *swapchain_info, struct vk_render *render);
+
 #endif //VK_RENDER_H
