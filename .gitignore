@@ -35,3 +35,11 @@
 # Vim files
 *.swp
 *.ycm*
+.lvimrc
+.maincraft_tags
+tags
+.session.vim
+*.spv
+
+# Script to run docker
+dock
