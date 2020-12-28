@@ -264,3 +264,56 @@ destroy_vert_code:
 return_error:
 	return ret;
 }
+
+int
+create_framebuffers(const VkDevice logical_device, struct vk_swapchain *swapchain, struct vk_render *render)
+{
+	int i;
+	VkFramebuffer *framebuffers;
+
+	framebuffers = malloc(sizeof(VkFramebuffer) * swapchain->images_count);
+	if (!framebuffers) {
+		print_error("Failed to allocated framebuffer vector!");
+		return -1;
+	}
+
+	for (i = 0; i < swapchain->images_count; i++) {
+		VkImageView attachments[] = { swapchain->image_views[i] };
+
+		VkFramebufferCreateInfo framebuffer_info = {
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = render->render_pass,
+			.attachmentCount = array_size(attachments),
+			.pAttachments = attachments,
+			.width = swapchain->state.extent.width,
+			.height = swapchain->state.extent.height,
+			.layers = 1
+		};
+
+		if (vkCreateFramebuffer(logical_device, &framebuffer_info, NULL, &framebuffers[i]) != VK_SUCCESS) {
+			pprint_error("Failed to create framebuffer %u/%u!", i, swapchain->images_count);
+			break;
+		}
+	}
+
+	if (i != swapchain->images_count) {
+		framebuffers_cleanup(logical_device, framebuffers, i - 1);
+		return -1;
+	}
+
+	render->swapChain_framebuffers = framebuffers;
+	render->framebuffer_count = swapchain->images_count;
+
+	return 0;
+}
+
+void
+framebuffers_cleanup(const VkDevice logical_device, VkFramebuffer *framebuffers, uint32_t size)
+{
+	int i;
+
+	for (i = 0; i < size; i++)
+		vkDestroyFramebuffer(logical_device, framebuffers[i], NULL);
+
+	free(framebuffers);
+}

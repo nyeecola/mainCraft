@@ -11,6 +11,8 @@ struct vk_render {
 	VkRenderPass render_pass;
 	VkPipeline graphics_pipeline;
 	VkPipelineLayout pipeline_layout;;
+	VkFramebuffer *swapChain_framebuffers;
+	uint32_t framebuffer_count;
 };
 
 struct surface_support {
