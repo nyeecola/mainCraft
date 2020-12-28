@@ -45,11 +45,16 @@ init_vk(struct vk_program *program)
 	if (create_graphics_pipeline(dev->logical_device, &dev->swapchain.state, render))
 		goto destroy_render_pass;
 
-	if (create_cmd_submission_infra(dev))
+	if (create_framebuffers(dev->logical_device, &dev->swapchain, &dev->render))
 		goto destroy_graphics_pipeline;
+
+	if (create_cmd_submission_infra(dev))
+		goto destroy_framebuffers;
 
 	return 0;
 
+destroy_framebuffers:
+	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
 destroy_graphics_pipeline:
 	vkDestroyPipeline(dev->logical_device, render->graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
@@ -79,6 +84,7 @@ vk_cleanup(struct vk_program program)
 
 	cleanup_command_pools(dev->logical_device, dev->command_pools);
 	free_command_buffer_vector(dev->cmd_buffers);
+	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
 	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
 	vkDestroyRenderPass(dev->logical_device, dev->render.render_pass, NULL);
