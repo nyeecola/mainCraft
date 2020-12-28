@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "vk_command_buffer.h"
+#include "constants.h"
 #include "utils.h"
 
 
@@ -109,4 +110,51 @@ cleanup_command_pools:
 	free_command_buffer_vector(cmd_buffer);
 return_error:
 	return -1;
+}
+
+int
+record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, struct vk_render *render)
+{
+	int i;
+
+	for (i = 0; i < swapchain->images_count; i++) {
+		VkCommandBufferBeginInfo begin_info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.flags = 0,
+		};
+
+		if (vkBeginCommandBuffer(cmd_buffers[graphics][i], &begin_info) != VK_SUCCESS) {
+			print_error("Failed to begin recording command buffer!");
+			return -1;
+		}
+
+		VkClearValue clear_values = {
+			/* workarround: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80454 */
+			.color = { { SKY_COLOR_RED, SKY_COLOR_GREEN , SKY_COLOR_BLUE , SKY_COLOR_ALPHA } }
+		};
+
+		VkRenderPassBeginInfo render_pass_info = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.renderPass = render->render_pass,
+			.framebuffer = render->swapChain_framebuffers[i],
+			.renderArea.offset = { 0, 0 },
+			.renderArea.extent = swapchain->state.extent,
+			.clearValueCount = 1,
+			.pClearValues = &clear_values
+		};
+
+		vkCmdBeginRenderPass(cmd_buffers[graphics][i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(cmd_buffers[graphics][i], VK_PIPELINE_BIND_POINT_GRAPHICS, render->graphics_pipeline);
+
+		vkCmdDraw(cmd_buffers[graphics][i], 3, 1, 0, 0);
+
+		vkCmdEndRenderPass(cmd_buffers[graphics][i]);
+
+		if (vkEndCommandBuffer(cmd_buffers[graphics][i]) != VK_SUCCESS) {
+			print_error("Failed to record command buffer!");
+			return -1;
+		}
+	}
+	return 0;
 }

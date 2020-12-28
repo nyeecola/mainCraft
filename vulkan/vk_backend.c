@@ -51,6 +51,9 @@ init_vk(struct vk_program *program)
 	if (create_cmd_submission_infra(dev))
 		goto destroy_framebuffers;
 
+	if (record_draw_cmd(dev->cmd_buffers, &dev->swapchain, &dev->render))
+		goto destroy_framebuffers;
+
 	return 0;
 
 destroy_framebuffers:
