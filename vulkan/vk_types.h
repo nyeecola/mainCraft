@@ -5,11 +5,12 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 
-
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
 
 struct vk_render {
 	VkRenderPass render_pass;
+	VkPipeline graphics_pipeline;
+	VkPipelineLayout pipeline_layout;;
 };
 
 struct surface_support {

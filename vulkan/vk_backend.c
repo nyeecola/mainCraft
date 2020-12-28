@@ -42,11 +42,17 @@ init_vk(struct vk_program *program)
 	if (render->render_pass == VK_NULL_HANDLE)
 		goto destroy_image_views;
 
-	if (create_cmd_submission_infra(dev))
+	if (create_graphics_pipeline(dev->logical_device, &dev->swapchain.state, render))
 		goto destroy_render_pass;
+
+	if (create_cmd_submission_infra(dev))
+		goto destroy_graphics_pipeline;
 
 	return 0;
 
+destroy_graphics_pipeline:
+	vkDestroyPipeline(dev->logical_device, render->graphics_pipeline, NULL);
+	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
 destroy_render_pass:
 	vkDestroyRenderPass(dev->logical_device, render->render_pass, NULL);
 destroy_image_views:
@@ -69,9 +75,12 @@ void
 vk_cleanup(struct vk_program program)
 {
 	struct vk_device *dev = &program.device;
+	struct vk_render *render = &dev->render;
 
 	cleanup_command_pools(dev->logical_device, dev->command_pools);
 	free_command_buffer_vector(dev->cmd_buffers);
+	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
+	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
 	vkDestroyRenderPass(dev->logical_device, dev->render.render_pass, NULL);
 	image_views_cleanup(dev->logical_device, dev->swapchain);
 	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
