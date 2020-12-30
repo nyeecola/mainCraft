@@ -5,7 +5,18 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 
+#include "vk_constants.h"
+
+
+
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
+
+struct vk_draw_sync {
+	VkSemaphore image_available_semaphore[MAX_FRAMES_IN_FLIGHT];
+	VkSemaphore render_finished_semaphore[MAX_FRAMES_IN_FLIGHT];
+	VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT];
+	VkFence *images_in_flight;
+};
 
 struct vk_render {
 	VkRenderPass render_pass;
@@ -56,6 +67,7 @@ struct vk_device {
 	uint32_t cmd_buffers_count[queues_count];
 	struct vk_swapchain swapchain;
 	struct vk_render render;
+	struct vk_draw_sync draw_sync;
 };
 
 struct vk_program {
