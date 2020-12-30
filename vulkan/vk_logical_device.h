@@ -13,6 +13,9 @@ find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, 
 bool
 check_device_extension_support(VkPhysicalDevice physical_device);
 
+int
+query_surface_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface, struct surface_support *surface_support);
+
 bool
 is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_device, VkSurfaceKHR surface);
 

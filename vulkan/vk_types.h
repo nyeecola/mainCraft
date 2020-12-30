@@ -4,6 +4,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+#include <stdbool.h>
 
 #include "vk_constants.h"
 
@@ -47,6 +48,7 @@ struct vk_swapchain {
 	uint32_t images_count;
 	struct swapchain_info state;
 	struct surface_support support;
+	bool framebuffer_resized;
 };
 
 struct vk_queues {
