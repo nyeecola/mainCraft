@@ -10,6 +10,8 @@
 #define enable_validation_layers false
 #endif
 
+#define MAX_FRAMES_IN_FLIGHT 2
+
 extern const char *validation_layers[1];
 extern const char *device_extensions[1];
 
