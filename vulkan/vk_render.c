@@ -1,4 +1,6 @@
 #include <stdlib.h>
+
+#include "vk_descriptors.h"
 #include "vk_render.h"
 #include "utils.h"
 
@@ -92,6 +94,8 @@ create_shader_module(const VkDevice logical_device, const char *code, int64_t si
 int
 create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *swapchain_info, struct vk_render *render)
 {
+	static VkVertexInputAttributeDescription *vertex_attribute_descriptions;
+	static VkVertexInputBindingDescription vertex_binding_description;
 	char *vert_shader_code, *frag_shader_code;
 	int64_t vert_size, frag_size;
 	VkPipeline pipeline;
@@ -114,9 +118,29 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 	if (frag_shader_module == VK_NULL_HANDLE)
 		goto destroy_vert_module;
 
+	vertex_binding_description = get_vertex_binding_description(0);
+	vertex_attribute_descriptions = get_vertex_attribute_descriptions(0, 0);
+
+	if (!vertex_attribute_descriptions) {
+		print_error("Failed to allocate vertex description binding");
+		goto destroy_frag_module;
+	}
+
+	VkVertexInputAttributeDescription attribute_descriptions_vector[] = {
+		vertex_attribute_descriptions[0],
+		vertex_attribute_descriptions[1],
+	};
+
+	VkVertexInputBindingDescription binding_description_vector[] = {
+		vertex_binding_description,
+	};
+
 	VkPipelineVertexInputStateCreateInfo vertex_input_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.vertexBindingDescriptionCount = 0
+		.vertexBindingDescriptionCount = array_size(binding_description_vector),
+		.pVertexBindingDescriptions = binding_description_vector,
+		.vertexAttributeDescriptionCount = array_size(attribute_descriptions_vector),
+		.pVertexAttributeDescriptions = attribute_descriptions_vector,
 	};
 
 	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {
@@ -229,7 +253,7 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 	result = vkCreatePipelineLayout(logical_device, &pipeline_layout_info, NULL, &render->pipeline_layout);
 	if (result != VK_SUCCESS) {
 		print_error("Failed to create pipeline layout!");
-		goto destroy_frag_module;
+		goto free_vertex_attribute_descriptions;
 	}
 
 	VkGraphicsPipelineCreateInfo pipeline_info = {
@@ -259,7 +283,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 	render->graphics_pipeline = pipeline;
 
 	ret = 0;
-
+free_vertex_attribute_descriptions:
+	free(vertex_attribute_descriptions);
 destroy_frag_module:
 	vkDestroyShaderModule(logical_device, frag_shader_module, NULL);
 destroy_vert_module:

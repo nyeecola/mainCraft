@@ -7,6 +7,7 @@ A C version of the 'Minecraft in 500 lines of python'.
 > * [glfw](https://repology.org/project/glfw/packages) version 3.1.2-1 or higher
 > * OpenGL 2.0 or higher
 > * Vulkan 1.0 or higher
+> * [cglm](https://repology.org/project/cglm/packages)
 
 ## Intructions
 
