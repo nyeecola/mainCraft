@@ -84,7 +84,17 @@ create_cmd_submission_infra(struct vk_device *device)
 	VkCommandBuffer **cmd_buffer = device->cmd_buffers;
 	VkCommandPool *cmd_pool = device->command_pools;
 
-	cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics], 0);
+	/* If we don't have a transfer queue we need to use the graphics queue to
+	 * transfer the buffers and images, then we need to set the flag
+	 * VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT to reuse graphics
+	 * command buffers to transfer things and render things by reseting command
+	 * buffers.
+	 *  */
+	if (device->queues.queue_count[transfer])
+		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics], 0);
+	else
+		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics],
+												 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	if (cmd_pool[graphics] == VK_NULL_HANDLE)
 		goto return_error;
 
@@ -119,8 +129,14 @@ return_error:
 }
 
 int
-record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, struct vk_render *render)
+record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain,
+				struct vk_render *render, struct vk_game_objects *game_objects)
 {
+	struct vk_vertex_object *obj = &game_objects->dummy_triangle;
+	VkBuffer vertex_buffers[] = { obj->vertex_buffer };
+	VkBuffer index_buffer = obj->index_buffer;
+	uint32_t index_count = obj->indices_count;
+	VkDeviceSize offsets[] = { 0 };
 	VkResult result;
 	int i;
 
@@ -155,7 +171,11 @@ record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, 
 
 		vkCmdBindPipeline(cmd_buffers[graphics][i], VK_PIPELINE_BIND_POINT_GRAPHICS, render->graphics_pipeline);
 
-		vkCmdDraw(cmd_buffers[graphics][i], 3, 1, 0, 0);
+		vkCmdBindVertexBuffers(cmd_buffers[graphics][i], 0, array_size(vertex_buffers), vertex_buffers, offsets);
+
+		vkCmdBindIndexBuffer(cmd_buffers[graphics][i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdDrawIndexed(cmd_buffers[graphics][i], index_count, 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(cmd_buffers[graphics][i]);
 
@@ -167,3 +187,54 @@ record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, 
 	}
 	return 0;
 }
+
+// Boiler plate to start a One Time submit buffer
+VkResult
+begin_single_time_commands(VkCommandBuffer cmd_buffer)
+{
+	VkResult result;
+
+	VkCommandBufferBeginInfo begin_info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+	};
+
+	result = vkBeginCommandBuffer(cmd_buffer, &begin_info);
+	if (result != VK_SUCCESS)
+		print_error("Failed while beggining command buffer record!");
+
+	return result;
+}
+
+// Boiler plate to finish a One Time submit buffer
+VkResult
+end_single_time_commands(VkCommandBuffer cmd_buffer, VkQueue queue)
+{
+	VkResult result;
+
+	result = vkEndCommandBuffer(cmd_buffer);
+	if (result != VK_SUCCESS) {
+		print_error("Failed while finishing command buffer record!");
+		return result;
+	}
+
+	VkSubmitInfo submit_info = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &cmd_buffer
+	};
+
+	/* TODO: Maybe we could be interesting use fences to do that if we have a more
+	 * complex scenario with a lot of transfer and other stuffs going on
+	 * */
+	result = vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to submit command buffer!");
+		return result;
+	}
+
+	vkQueueWaitIdle(queue);
+
+	return result;
+}
+

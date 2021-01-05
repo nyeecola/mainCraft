@@ -3,14 +3,29 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <cglm/cglm.h>
 #include <vulkan/vulkan.h>
 #include <stdbool.h>
 
 #include "vk_constants.h"
 
 
-
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
+
+struct vk_vertex_object {
+	VkBuffer vertex_buffer;
+	VkDeviceMemory vertex_buffer_memory;
+	struct vertex *vertices;
+	uint64_t vertices_count;
+	uint16_t *indices;
+	uint64_t indices_count;
+	VkBuffer index_buffer;
+	VkDeviceMemory index_buffer_memory;
+};
+
+struct vk_game_objects {
+	struct vk_vertex_object dummy_triangle;
+};
 
 struct vk_draw_sync {
 	VkSemaphore image_available_semaphore[MAX_FRAMES_IN_FLIGHT];
@@ -70,6 +85,7 @@ struct vk_device {
 	struct vk_swapchain swapchain;
 	struct vk_render render;
 	struct vk_draw_sync draw_sync;
+	struct vk_game_objects game_objs;
 };
 
 struct vk_program {
