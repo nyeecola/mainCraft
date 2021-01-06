@@ -10,6 +10,7 @@ VkCommandPool
 create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoolCreateFlags flags)
 {
 	VkCommandPool command_pool;
+	VkResult result;
 
 	VkCommandPoolCreateInfo pool_info = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -17,7 +18,8 @@ create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoo
 		.flags = flags // Optional
 	};
 
-	if (vkCreateCommandPool(logical_device, &pool_info, NULL, &command_pool) != VK_SUCCESS) {
+	result = vkCreateCommandPool(logical_device, &pool_info, NULL, &command_pool);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create command pool!");
 		return VK_NULL_HANDLE;
 	}
@@ -28,7 +30,10 @@ create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoo
 VkCommandBuffer *
 create_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBufferLevel level, uint32_t count)
 {
-	VkCommandBuffer *command_buffers = malloc(sizeof(VkCommandBuffer) * count);
+	VkCommandBuffer *command_buffers;
+	VkResult result;
+
+	command_buffers = malloc(sizeof(VkCommandBuffer) * count);
 	if (!command_buffers) {
 		print_error("Failed to allocate command buffer handle vector!");
 		return NULL;
@@ -41,7 +46,8 @@ create_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBuf
 		.commandBufferCount = count,
 	};
 
-	if (vkAllocateCommandBuffers(logical_device, &alloc_info, command_buffers) != VK_SUCCESS) {
+	result = vkAllocateCommandBuffers(logical_device, &alloc_info, command_buffers);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to allocate command buffer handles!");
 		free(command_buffers);
 		return NULL;
@@ -115,6 +121,7 @@ return_error:
 int
 record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, struct vk_render *render)
 {
+	VkResult result;
 	int i;
 
 	for (i = 0; i < swapchain->images_count; i++) {
@@ -123,7 +130,8 @@ record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, 
 			.flags = 0,
 		};
 
-		if (vkBeginCommandBuffer(cmd_buffers[graphics][i], &begin_info) != VK_SUCCESS) {
+		result = vkBeginCommandBuffer(cmd_buffers[graphics][i], &begin_info);
+		if (result != VK_SUCCESS) {
 			print_error("Failed to begin recording command buffer!");
 			return -1;
 		}
@@ -151,7 +159,8 @@ record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain, 
 
 		vkCmdEndRenderPass(cmd_buffers[graphics][i]);
 
-		if (vkEndCommandBuffer(cmd_buffers[graphics][i]) != VK_SUCCESS) {
+		result = vkEndCommandBuffer(cmd_buffers[graphics][i]);
+		if (result != VK_SUCCESS) {
 			print_error("Failed to record command buffer!");
 			return -1;
 		}

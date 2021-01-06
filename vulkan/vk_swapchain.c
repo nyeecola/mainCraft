@@ -58,8 +58,9 @@ create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *win
 	struct vk_queues *queues = &device->queues;
 	VkSharingMode image_sharing_mode = VK_SHARING_MODE_EXCLUSIVE;
 	uint32_t queue_family_indices[queues_count];
-	uint32_t image_count;
 	uint32_t family_count = 0;
+	uint32_t image_count;
+	VkResult result;
 	VkImage* images;
 
 	swapchain_state->present_mode = chooseSwapPresentMode(&device->swapchain.support);
@@ -101,31 +102,48 @@ create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *win
 		.imageSharingMode = image_sharing_mode
 	};
 
-	if (vkCreateSwapchainKHR(device->logical_device, &create_info, NULL, &device->swapchain.handle) != VK_SUCCESS) {
+	result = vkCreateSwapchainKHR(device->logical_device, &create_info, NULL, &device->swapchain.handle);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create swap chain!");
-		return -1;
+		goto return_error;
 	}
 
-	vkGetSwapchainImagesKHR(device->logical_device, device->swapchain.handle, &image_count, NULL);
+	result = vkGetSwapchainImagesKHR(device->logical_device, device->swapchain.handle, &image_count, NULL);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to enumerate the swap chain images!");
+		goto destroy_swapchain;
+	}
 
 	images = malloc(sizeof(VkImage) * image_count);
 	if (!images) {
 		print_error("Failed while allocating swapchain images vector!");
-		return -1;
+		goto destroy_swapchain;
 	}
 
-	vkGetSwapchainImagesKHR(device->logical_device, device->swapchain.handle, &image_count, images);
+	result = vkGetSwapchainImagesKHR(device->logical_device, device->swapchain.handle, &image_count, images);
+	if (result != VK_SUCCESS) {
+		print_error("Failed retrieve swap chain images!");
+		goto free_images;
+	}
 
 	device->swapchain.images = images;
 	device->swapchain.images_count = image_count;
 
 	return 0;
+
+free_images:
+	free(images);
+destroy_swapchain:
+	vkDestroySwapchainKHR(device->logical_device, device->swapchain.handle, NULL);
+return_error:
+	return -1;
 }
 
 VkImageView
-createImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags)
+create_image_view(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags)
 {
 	VkImageView image_view;
+	VkResult result;
 
 	VkImageViewCreateInfo view_info = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -143,9 +161,10 @@ createImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImage
 		.subresourceRange.layerCount = 1
 	};
 
-	if (vkCreateImageView(logical_device, &view_info, NULL, &image_view) != VK_SUCCESS) {
+	result = vkCreateImageView(logical_device, &view_info, NULL, &image_view);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create texture image view!");
-		return NULL;
+		return VK_NULL_HANDLE;
 	}
 
 	return image_view;
@@ -163,9 +182,9 @@ create_image_views(VkDevice logical_device, struct vk_swapchain *swapchain)
 	}
 
 	for (i = 0; i < swapchain->images_count; i++) {
-		swapchain->image_views[i] = createImageView(logical_device, swapchain->images[i],
-													swapchain->state.surface_format.format,
-													VK_IMAGE_ASPECT_COLOR_BIT);
+		swapchain->image_views[i] = create_image_view(logical_device, swapchain->images[i],
+													  swapchain->state.surface_format.format,
+													  VK_IMAGE_ASPECT_COLOR_BIT);
 		if (!swapchain->image_views[i]) {
 			pprint_error("Failed to create %d/%u image view!", i, swapchain->images_count);
 			break;
@@ -173,7 +192,7 @@ create_image_views(VkDevice logical_device, struct vk_swapchain *swapchain)
 	}
 
 	if (i != swapchain->images_count) {
-		image_views_cleanup(logical_device, *swapchain);
+		image_views_cleanup(logical_device, swapchain->image_views, swapchain->images_count);
 		return -1;
 	}
 
@@ -181,12 +200,12 @@ create_image_views(VkDevice logical_device, struct vk_swapchain *swapchain)
 }
 
 void
-image_views_cleanup(VkDevice logical_device, struct vk_swapchain swapchain)
+image_views_cleanup(VkDevice logical_device, VkImageView *image_views, uint32_t images_count)
 {
 	int i;
 
-	for (i = 0; i < swapchain.images_count && swapchain.image_views[i]; i++)
-		vkDestroyImageView(logical_device, swapchain.image_views[i], NULL);
+	for (i = 0; i < images_count && image_views[i]; i++)
+		vkDestroyImageView(logical_device, image_views[i], NULL);
 
-	free(swapchain.image_views);
+	free(image_views);
 }

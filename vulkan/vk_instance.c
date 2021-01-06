@@ -11,18 +11,28 @@
 bool checkValidationLayerSupport() {
 	VkLayerProperties *available_layers;
 	uint32_t layer_count, i, j;
-	bool layer_found, ret = true;
+	bool layer_found, ret = false;
+	VkResult result;
 
-	vkEnumerateInstanceLayerProperties(&layer_count, NULL);
+	result = vkEnumerateInstanceLayerProperties(&layer_count, NULL);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to enumerate instace layer properties!");
+		goto return_false;
+	}
 
 	available_layers = malloc(sizeof(VkLayerProperties) * layer_count);
 	if (!available_layers) {
 		print_error("Failed while quering Vulkan layers!");
-		return false;
+		goto return_false;
 	}
 
-	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
+	result = vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to enumerate instace layer properties!");
+		goto free_available_layers_vector;
+	}
 
+	ret = true;
 	// Verify if the necessary layers are available by comparing the names
 	for (i = 0; i < array_size(validation_layers); i++) {
 		layer_found = false;
@@ -39,19 +49,24 @@ bool checkValidationLayerSupport() {
 		}
 	}
 
+free_available_layers_vector:
 	free(available_layers);
+return_false:
 	return ret;
 }
 
 VkInstance
 create_instance(VkApplicationInfo *app_info)
 {
-	VkInstance instance;
 	uint32_t glfw_extension_count;
 	const char **glfw_extensions;
+	VkInstance instance;
+	VkResult result;
 
-	if (enable_validation_layers && !checkValidationLayerSupport())
+	if (enable_validation_layers && !checkValidationLayerSupport()) {
 		print_error("Not all validation layers requested are available!");
+		return VK_NULL_HANDLE;
+	}
 
 	VkInstanceCreateInfo create_info = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -59,6 +74,11 @@ create_instance(VkApplicationInfo *app_info)
 	};
 
 	glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
+	if (!glfw_extensions) {
+		print_error("Failed to get glfw required extentions!");
+		return VK_NULL_HANDLE;
+	}
+
 	create_info.enabledExtensionCount = glfw_extension_count;
 	create_info.ppEnabledExtensionNames = glfw_extensions;
 
@@ -68,9 +88,10 @@ create_instance(VkApplicationInfo *app_info)
 	} else
 		create_info.enabledLayerCount = 0;
 
-	if (vkCreateInstance(&create_info, NULL, &instance) != VK_SUCCESS) {
+	result = vkCreateInstance(&create_info, NULL, &instance);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create a Vulkan instance!");
-		return NULL;
+		return VK_NULL_HANDLE;
 	}
 
 	return instance;

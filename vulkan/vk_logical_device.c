@@ -14,20 +14,25 @@ find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, 
 	uint32_t i, queue_queue_count = 0;
 	VkQueueFamilyProperties *queue_family;
 	VkBool32 present_support = false;
+	VkResult result;
+	int ret = -1;
 
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_queue_count, NULL);
 
 	queue_family = malloc(sizeof(VkQueueFamilyProperties) * queues_count);
 	if (!queue_family) {
 		print_error("Failed to allocate queue_family vector!");
-		return -1;
+		goto return_error;
 	}
 
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_queue_count, queue_family);
 
 	for (i = 0; i < queue_queue_count; i++) {
-		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &present_support);
-
+		result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &present_support);
+		if (result != VK_SUCCESS) {
+			print_error("Failed retrieve device surface support!");
+			goto free_queue_family;
+		}
 		/* Verify if our gpu has a presentation family_indices queue
 		 * Notice this queue is a extention, so in the vulkan core
 		 * this isn't necessary
@@ -53,9 +58,12 @@ find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, 
 		}
 	}
 
-	free(queue_family);
+	ret = 0;
 
-	return 0;
+free_queue_family:
+	free(queue_family);
+return_error:
+	return ret;
 }
 
 bool
@@ -63,17 +71,29 @@ check_device_extension_support(VkPhysicalDevice physical_device)
 {
 	VkExtensionProperties *available_extensions;
 	uint32_t extension_count, i, j, available_in_device = 0;
+	VkResult result;
 	bool ret = true;
 
-	vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
-	available_extensions = malloc(sizeof(VkExtensionProperties) * extension_count);
-	if (!available_extensions) {
-		print_error("failed while probing device extentions");
+	result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to enumerate device extentions");
 		ret = false;
 		goto return_value;
 	}
 
-	vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, available_extensions);
+	available_extensions = malloc(sizeof(VkExtensionProperties) * extension_count);
+	if (!available_extensions) {
+		print_error("Failed while probing device extentions");
+		ret = false;
+		goto return_value;
+	}
+
+	result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, available_extensions);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to retrieve device extentions");
+		ret = false;
+		goto free_available_extentions;
+	}
 
 	for (i = 0; i < extension_count; i++)
 		for (j = 0; j < array_size(device_extensions); j++)
@@ -84,6 +104,7 @@ check_device_extension_support(VkPhysicalDevice physical_device)
 	if (available_in_device != array_size(device_extensions))
 		ret = false;
 
+free_available_extentions:
 	free(available_extensions);
 return_value:
 	return ret;
@@ -94,9 +115,19 @@ query_surface_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface, st
 {
 	uint32_t formats_count, present_mode_count;
 	surface_support->formats_count = surface_support->present_modes_count = 0;
+	VkResult result;
 
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_support->capabilities);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, NULL);
+	result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_support->capabilities);
+	if (result != VK_SUCCESS) {
+		print_error("Failed get device surface capabilities!");
+		return -1;
+	}
+
+	result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, NULL);
+	if (result != VK_SUCCESS) {
+		print_error("Failed get device surface formats!");
+		return -1;
+	}
 
 	if (formats_count) {
 		surface_support->formats = malloc(sizeof(VkSurfaceFormatKHR) * formats_count);
@@ -104,19 +135,32 @@ query_surface_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface, st
 			print_error("Failed while recovering physical Device surface formats!");
 			return -1;
 		}
-		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, surface_support->formats);
+		result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, surface_support->formats);
+		if (result != VK_SUCCESS) {
+			print_error("Failed get device surface formats!");
+			return -1;
+		}
 		surface_support->formats_count = formats_count;
 	}
 
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
+	result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
+	if (result != VK_SUCCESS) {
+		print_error("Failed get device surface present modes!");
+		return -1;
+	}
+
 	if (present_mode_count) {
 		surface_support->present_modes = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
 		if (!surface_support->present_modes) {
-			print_error("Failed while recovering physical Device surface Present Modes!");
+			print_error("Failed allocated the present modes vector!");
 			return -1;
 		}
-		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
-												  surface_support->present_modes);
+		result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
+														   surface_support->present_modes);
+		if (result != VK_SUCCESS) {
+			print_error("Failed get device surface present modes!");
+			return -1;
+		}
 		surface_support->present_modes_count = present_mode_count;
 	}
 
@@ -175,6 +219,7 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 {
 	uint32_t device_count = 0, i;
 	VkPhysicalDevice *devices;
+	VkResult result;
 	int ret = -1;
 
 	vkEnumeratePhysicalDevices(instance, &device_count, NULL);
@@ -185,11 +230,15 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 
 	devices = malloc(sizeof(VkPhysicalDevice) * device_count);
 	if (!devices) {
-		print_error("Failed while allocating physical device vector!");
+		print_error("Failed while allocating physical devices vector!");
 		goto return_error;
 	}
 
-	vkEnumeratePhysicalDevices(instance, &device_count, devices);
+	result = vkEnumeratePhysicalDevices(instance, &device_count, devices);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to retrieve physical devices!");
+		goto free_device_vector;
+	}
 
 	for (i = 0; i < device_count; i++)
 		if (is_device_suitable(devices[i], device, surface)) {
@@ -200,6 +249,7 @@ pick_physical_device(VkInstance instance, struct vk_device *device, VkSurfaceKHR
 	if (ret)
 		print_error("Failed to find a suitable GPU!");
 
+free_device_vector:
 	free(devices);
 return_error:
 	return ret;
@@ -210,17 +260,19 @@ create_logical_device(struct vk_device *device)
 {
 	uint64_t unique_queue_families[queues_count], i, unique_family_count = 0;
 	VkDeviceQueueCreateInfo queue_create_infos[queues_count];
-	const struct vk_queues *queues_index = &device->queues;
+	struct vk_queues *queues = &device->queues;
+	uint32_t *family_indices = queues->family_indices;
 	const float queue_priority = 1.0f;
+	VkResult result;
 
 	/* Because we already verified it in `find_queue_families()` we don't need check
 	 * if this GPU have a Graphics/Present queue
 	 */
-	unique_queue_families[unique_family_count++] = queues_index->family_indices[graphics];
-	if (queues_index->family_indices[present] != queues_index->family_indices[graphics])
-		unique_queue_families[unique_family_count++] = queues_index->family_indices[present];
-	if (queues_index->queue_count[transfer])
-		unique_queue_families[unique_family_count++] = queues_index->family_indices[transfer];
+	unique_queue_families[unique_family_count++] = family_indices[graphics];
+	if (queues->family_indices[present] != queues->family_indices[graphics])
+		unique_queue_families[unique_family_count++] = queues->family_indices[present];
+	if (queues->queue_count[transfer])
+		unique_queue_families[unique_family_count++] = queues->family_indices[transfer];
 
 	for (i = 0; i < unique_family_count; i++) {
 		VkDeviceQueueCreateInfo queue_create_info = {
@@ -246,22 +298,20 @@ create_logical_device(struct vk_device *device)
 		create_info.ppEnabledLayerNames = validation_layers;
 	}
 
-	if (vkCreateDevice(device->physical_device , &create_info, NULL, &device->logical_device) != VK_SUCCESS) {
+	result = vkCreateDevice(device->physical_device , &create_info, NULL, &device->logical_device);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create logical device!");
 		return -1;
 	}
 
 	// And the retrieve the queues
-	vkGetDeviceQueue(device->logical_device, queues_index->family_indices[graphics],
-					 0, &device->queues.handles[graphics]);
-	device->queues.queue_count[graphics] = 1;
-	vkGetDeviceQueue(device->logical_device, queues_index->family_indices[present],
-					 0, &device->queues.handles[present]);
-	device->queues.queue_count[present] = 1;
-	if (queues_index->queue_count[transfer]) {
-		vkGetDeviceQueue(device->logical_device, queues_index->family_indices[transfer],
-						 0, &device->queues.handles[transfer]);
-		device->queues.queue_count[transfer] = 1;
+	vkGetDeviceQueue(device->logical_device, family_indices[graphics], 0, &queues->handles[graphics]);
+	vkGetDeviceQueue(device->logical_device, family_indices[present], 0, &queues->handles[present]);
+	queues->queue_count[graphics] = 1;
+	queues->queue_count[present] = 1;
+	if (queues->queue_count[transfer]) {
+		vkGetDeviceQueue(device->logical_device, family_indices[transfer], 0, &queues->handles[transfer]);
+		queues->queue_count[transfer] = 1;
 	}
 
 	return 0;
