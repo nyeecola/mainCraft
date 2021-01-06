@@ -6,6 +6,7 @@ VkRenderPass
 create_render_pass(VkDevice logical_device, struct swapchain_info state)
 {
 	VkRenderPass render_pass;
+	VkResult result;
 
 	VkAttachmentDescription color_attachment = {
 		.format = state.surface_format.format,
@@ -59,7 +60,8 @@ create_render_pass(VkDevice logical_device, struct swapchain_info state)
 		.pDependencies = subpasses_dependencies
 	};
 
-	if (vkCreateRenderPass(logical_device, &render_pass_info, NULL, &render_pass) != VK_SUCCESS) {
+	result = vkCreateRenderPass(logical_device, &render_pass_info, NULL, &render_pass);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create render pass!");
 		return VK_NULL_HANDLE;
 	}
@@ -68,8 +70,9 @@ create_render_pass(VkDevice logical_device, struct swapchain_info state)
 }
 
 VkShaderModule
-createShaderModule(const VkDevice logical_device, const char *code, int64_t size) {
+create_shader_module(const VkDevice logical_device, const char *code, int64_t size) {
 	VkShaderModule shader_module;
+	VkResult result;
 
 	VkShaderModuleCreateInfo create_info = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -77,7 +80,8 @@ createShaderModule(const VkDevice logical_device, const char *code, int64_t size
 		.pCode = (const uint32_t *) code
 	};
 
-	if (vkCreateShaderModule(logical_device, &create_info, NULL, &shader_module) != VK_SUCCESS) {
+	result = vkCreateShaderModule(logical_device, &create_info, NULL, &shader_module);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create shader module!");
 		return VK_NULL_HANDLE;
 	}
@@ -91,6 +95,7 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 	char *vert_shader_code, *frag_shader_code;
 	int64_t vert_size, frag_size;
 	VkPipeline pipeline;
+	VkResult result;
 	int ret = -1;
 
 	vert_shader_code = read_file("shaders/vert.spv", &vert_size);
@@ -101,11 +106,11 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 	if (!frag_shader_code)
 		goto destroy_vert_code;
 
-	VkShaderModule vert_shader_module = createShaderModule(logical_device, vert_shader_code, vert_size);
+	VkShaderModule vert_shader_module = create_shader_module(logical_device, vert_shader_code, vert_size);
 	if (vert_shader_module == VK_NULL_HANDLE)
 		goto destroy_frag_code;
 
-	VkShaderModule frag_shader_module = createShaderModule(logical_device, frag_shader_code, frag_size);
+	VkShaderModule frag_shader_module = create_shader_module(logical_device, frag_shader_code, frag_size);
 	if (frag_shader_module == VK_NULL_HANDLE)
 		goto destroy_vert_module;
 
@@ -221,7 +226,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 		.pSetLayouts = VK_NULL_HANDLE
 	};
 
-	if (vkCreatePipelineLayout(logical_device, &pipeline_layout_info, NULL, &render->pipeline_layout) != VK_SUCCESS) {
+	result = vkCreatePipelineLayout(logical_device, &pipeline_layout_info, NULL, &render->pipeline_layout);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create pipeline layout!");
 		goto destroy_frag_module;
 	}
@@ -244,7 +250,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 		.basePipelineIndex = -1 // Optional
 	};
 
-	if (vkCreateGraphicsPipelines(logical_device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline) != VK_SUCCESS) {
+	result = vkCreateGraphicsPipelines(logical_device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline);
+	if (result != VK_SUCCESS) {
 		vkDestroyPipelineLayout(logical_device, render->pipeline_layout, NULL);
 		print_error("Failed to create graphics pipeline!");
 		goto destroy_frag_module;
@@ -268,8 +275,9 @@ return_error:
 int
 create_framebuffers(const VkDevice logical_device, struct vk_swapchain *swapchain, struct vk_render *render)
 {
-	int i;
 	VkFramebuffer *framebuffers;
+	VkResult result;
+	int i;
 
 	framebuffers = malloc(sizeof(VkFramebuffer) * swapchain->images_count);
 	if (!framebuffers) {
@@ -290,7 +298,8 @@ create_framebuffers(const VkDevice logical_device, struct vk_swapchain *swapchai
 			.layers = 1
 		};
 
-		if (vkCreateFramebuffer(logical_device, &framebuffer_info, NULL, &framebuffers[i]) != VK_SUCCESS) {
+		result = vkCreateFramebuffer(logical_device, &framebuffer_info, NULL, &framebuffers[i]);
+		if (result != VK_SUCCESS) {
 			pprint_error("Failed to create framebuffer %u/%u!", i, swapchain->images_count);
 			break;
 		}

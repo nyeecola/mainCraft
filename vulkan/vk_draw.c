@@ -7,7 +7,9 @@
 int
 create_sync_objects(VkDevice logical_device, struct vk_draw_sync *sync, uint32_t images_count)
 {
+	VkResult result;
 	int i;
+
 	sync->images_in_flight = calloc(sizeof(VkFence), images_count);
 	if (!sync->images_in_flight) {
 		print_error("Failed to allocate images_in_fligth vector");
@@ -26,17 +28,20 @@ create_sync_objects(VkDevice logical_device, struct vk_draw_sync *sync, uint32_t
 	};
 
 	for (i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		if (vkCreateSemaphore(logical_device, &semaphore_info, NULL, &sync->image_available_semaphore[i])) {
+		result = vkCreateSemaphore(logical_device, &semaphore_info, NULL, &sync->image_available_semaphore[i]);
+		if (result != VK_SUCCESS) {
 			print_error("Failed to create semaphores!");
 			break;
 		}
 
-		if (vkCreateSemaphore(logical_device, &semaphore_info, NULL, &sync->render_finished_semaphore[i])) {
+		result = vkCreateSemaphore(logical_device, &semaphore_info, NULL, &sync->render_finished_semaphore[i]);
+		if (result != VK_SUCCESS) {
 			print_error("Failed to create semaphores!");
 			break;
 		}
 
-		if (vkCreateFence(logical_device, &fence_info, NULL, &sync->in_flight_fences[i])){
+		result = vkCreateFence(logical_device, &fence_info, NULL, &sync->in_flight_fences[i]);
+		if (result != VK_SUCCESS) {
 			print_error("Failed to create fences!");
 			break;
 		}
@@ -120,9 +125,14 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 		.pSignalSemaphores = signalSemaphores
 	};
 
-	vkResetFences(logical_device, 1, &in_flight_fences);
+	result = vkResetFences(logical_device, 1, &in_flight_fences);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to reset fences!");
+		return -1;
+	}
 
-	if (vkQueueSubmit(queues[graphics], 1, &submitInfo, in_flight_fences) != VK_SUCCESS) {
+	result = vkQueueSubmit(queues[graphics], 1, &submitInfo, in_flight_fences);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to submit draw command buffer!");
 		return -1;
 	}

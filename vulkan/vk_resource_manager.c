@@ -16,27 +16,28 @@ create_render_and_presentation_infra(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
 	struct vk_render *render = &dev->render;
+	struct vk_swapchain *swapchain = &dev->swapchain;
 
 	if (create_swapchain(dev, program->surface, program->window))
 		goto exit_error;
 
-	if (create_image_views(dev->logical_device, &dev->swapchain))
+	if (create_image_views(dev->logical_device, swapchain))
 		goto destroy_swapchain;
 
-	render->render_pass = create_render_pass(dev->logical_device, dev->swapchain.state);
+	render->render_pass = create_render_pass(dev->logical_device, swapchain->state);
 	if (render->render_pass == VK_NULL_HANDLE)
 		goto destroy_image_views;
 
-	if (create_graphics_pipeline(dev->logical_device, &dev->swapchain.state, render))
+	if (create_graphics_pipeline(dev->logical_device, &swapchain->state, render))
 		goto destroy_render_pass;
 
-	if (create_framebuffers(dev->logical_device, &dev->swapchain, &dev->render))
+	if (create_framebuffers(dev->logical_device, swapchain, &dev->render))
 		goto destroy_graphics_pipeline;
 
 	if (create_cmd_submission_infra(dev))
 		goto destroy_framebuffers;
 
-	if (record_draw_cmd(dev->cmd_buffers, &dev->swapchain, &dev->render))
+	if (record_draw_cmd(dev->cmd_buffers, swapchain, &dev->render))
 		goto destroy_framebuffers;
 
 	return 0;
@@ -49,7 +50,7 @@ destroy_graphics_pipeline:
 destroy_render_pass:
 	vkDestroyRenderPass(dev->logical_device, render->render_pass, NULL);
 destroy_image_views:
-	image_views_cleanup(dev->logical_device, dev->swapchain);
+	image_views_cleanup(dev->logical_device, swapchain->image_views, swapchain->images_count);
 destroy_swapchain:
 	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
 exit_error:
@@ -60,6 +61,7 @@ void
 destroy_render_and_presentation_infra(struct vk_device *dev)
 {
 	struct vk_render *render = &dev->render;
+	struct vk_swapchain *swapchain = &dev->swapchain;
 
 	cleanup_command_pools(dev->logical_device, dev->command_pools);
 	free_command_buffer_vector(dev->cmd_buffers);
@@ -67,8 +69,8 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
 	vkDestroyRenderPass(dev->logical_device, dev->render.render_pass, NULL);
-	image_views_cleanup(dev->logical_device, dev->swapchain);
-	vkDestroySwapchainKHR(dev->logical_device, dev->swapchain.handle, NULL);
+	image_views_cleanup(dev->logical_device, swapchain->image_views, swapchain->images_count);
+	vkDestroySwapchainKHR(dev->logical_device, swapchain->handle, NULL);
 }
 
 int
@@ -77,8 +79,11 @@ init_vk(struct vk_program *program)
 	struct vk_device *dev = &program->device;
 
 	program->app_info = create_app_info();
-	if ((program->instance = create_instance(&program->app_info)) == NULL)
+	program->instance = create_instance(&program->app_info);
+	if (program->instance == VK_NULL_HANDLE) {
+		print_error("Failed to create a vulkan instance!");
 		goto exit_error;
+	}
 
 	if (glfwCreateWindowSurface(program->instance, program->window, NULL, &program->surface) != VK_SUCCESS) {
 		print_error("Failed to create a Window surface!");
