@@ -78,18 +78,18 @@ return_error:
 }
 
 int
-copy_buffer(struct vk_device *dev, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
+copy_buffer(struct vk_cmd_submission *cmd_sub, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
 {
 	VkCommandBuffer cmd_buffer;
 	VkResult result;
 	VkQueue queue;
 
-	if (dev->cmd_buffers_count[transfer] > 0) {
-		cmd_buffer = dev->cmd_buffers[transfer][0];
-		queue = dev->queues.handles[transfer];
+	if (cmd_sub->cmd_buffers_count[transfer] > 0) {
+		cmd_buffer = cmd_sub->cmd_buffers[transfer][0];
+		queue = cmd_sub->queue_handles[transfer];
 	} else {
-		cmd_buffer = dev->cmd_buffers[graphics][0];
-		queue = dev->queues.handles[graphics];
+		cmd_buffer = cmd_sub->cmd_buffers[graphics][0];
+		queue = cmd_sub->queue_handles[graphics];
 	}
 
 	result = begin_single_time_commands(cmd_buffer);
@@ -139,7 +139,7 @@ create_gpu_buffer(struct vk_device *dev, VkDeviceMemory *buffer_memory, VkBuffer
 	if (ret)
 		goto destoy_staging_buffer;
 
-	if (copy_buffer(dev, staging_buffer, local_buffer, buffer_size)) {
+	if (copy_buffer(&dev->cmd_submission, staging_buffer, local_buffer, buffer_size)) {
 		vkDestroyBuffer(dev->logical_device, local_buffer, NULL);
 		vkFreeMemory(dev->logical_device, local_buffer_memory, NULL);
 		goto destoy_staging_buffer;

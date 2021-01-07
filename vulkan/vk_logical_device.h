@@ -8,7 +8,7 @@
 
 
 int
-find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, VkSurfaceKHR surface);
+find_queue_families(VkPhysicalDevice physical_device, struct vk_cmd_submission *cmd_sub, VkSurfaceKHR surface);
 
 bool
 check_device_extension_support(VkPhysicalDevice physical_device);

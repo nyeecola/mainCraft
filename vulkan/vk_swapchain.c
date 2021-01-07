@@ -55,7 +55,7 @@ create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *win
 {
 	VkSurfaceCapabilitiesKHR swapchain_capabilities = device->swapchain.support.capabilities;
 	struct swapchain_info *swapchain_state = &device->swapchain.state;
-	struct vk_queues *queues = &device->queues;
+	struct vk_cmd_submission *cmd_sub = &device->cmd_submission;
 	VkSharingMode image_sharing_mode = VK_SHARING_MODE_EXCLUSIVE;
 	uint32_t queue_family_indices[queues_count];
 	uint32_t family_count = 0;
@@ -71,15 +71,15 @@ create_swapchain(struct vk_device *device, VkSurfaceKHR surface, GLFWwindow *win
 	if (swapchain_capabilities.maxImageCount > 0 && image_count > swapchain_capabilities.maxImageCount)
 		image_count = swapchain_capabilities.maxImageCount;
 
-	queue_family_indices[family_count++] = queues->family_indices[graphics];
+	queue_family_indices[family_count++] = cmd_sub->family_indices[graphics];
 
-	if (queues->family_indices[present] != queues->family_indices[graphics]) {
-		queue_family_indices[family_count++] = queues->family_indices[present];
+	if (cmd_sub->family_indices[present] != cmd_sub->family_indices[graphics]) {
+		queue_family_indices[family_count++] = cmd_sub->family_indices[present];
 		image_sharing_mode = VK_SHARING_MODE_CONCURRENT;
 	}
 
-	if (queues->queue_count[transfer]) {
-		queue_family_indices[family_count++] = queues->family_indices[transfer];
+	if (cmd_sub->queue_count[transfer]) {
+		queue_family_indices[family_count++] = cmd_sub->family_indices[transfer];
 		image_sharing_mode = VK_SHARING_MODE_CONCURRENT;
 	}
 

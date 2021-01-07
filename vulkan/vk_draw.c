@@ -81,9 +81,9 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 	VkSemaphore image_available_semaphore = sync->image_available_semaphore[*current_frame];
 	VkSemaphore render_finished_semaphore = sync->render_finished_semaphore[*current_frame];
 	VkFence in_flight_fences = sync->in_flight_fences[*current_frame];
-	const VkQueue *queues = dev->queues.handles;
+	const VkQueue *queues = dev->cmd_submission.queue_handles;
 	bool *framebuffer_resized = &dev->swapchain.framebuffer_resized;
-	VkCommandBuffer **cmd_buffers = dev->cmd_buffers;
+	VkCommandBuffer **cmd_buffers = dev->cmd_submission.cmd_buffers;
 	uint32_t imageIndex;
 	VkResult result;
 

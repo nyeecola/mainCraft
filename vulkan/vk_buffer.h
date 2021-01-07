@@ -14,7 +14,7 @@ create_buffer(struct vk_device *dev, VkDeviceSize size, VkBufferUsageFlags usage
 			 VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *buffer_memory);
 
 int
-copy_buffer(struct vk_device *dev, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+copy_buffer(struct vk_cmd_submission *cmd_sub, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
 
 int
 create_vertex_buffer(struct vk_device *dev, struct vk_vertex_object *vertex_object);

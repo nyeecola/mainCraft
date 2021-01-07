@@ -34,6 +34,18 @@ struct vk_draw_sync {
 	VkFence *images_in_flight;
 };
 
+struct vk_cmd_submission {
+	VkCommandPool command_pools[queues_count];
+	uint64_t pools_allocated;
+	VkCommandBuffer *cmd_buffers[queues_count];
+	uint32_t cmd_buffers_count[queues_count];
+	uint32_t family_indices[queues_count];
+	uint32_t queue_count[queues_count];
+	VkQueue queue_handles[queues_count];
+	/* Per family in use queue count*/
+	uint32_t handles_count[queues_count];
+};
+
 struct vk_render {
 	VkRenderPass render_pass;
 	VkPipeline graphics_pipeline;
@@ -66,22 +78,10 @@ struct vk_swapchain {
 	bool framebuffer_resized;
 };
 
-struct vk_queues {
-	uint32_t family_indices[queues_count];
-	uint32_t queue_count[queues_count];
-	VkQueue handles[queues_count];
-	/* Per family in use queue count*/
-	uint32_t handles_count[queues_count];
-};
-
 struct vk_device {
 	VkPhysicalDevice physical_device;
 	VkDevice logical_device;
-	struct vk_queues queues;
-	VkCommandPool command_pools[queues_count];
-	uint64_t pools_allocated;
-	VkCommandBuffer *cmd_buffers[queues_count];
-	uint32_t cmd_buffers_count[queues_count];
+	struct vk_cmd_submission cmd_submission;
 	struct vk_swapchain swapchain;
 	struct vk_render render;
 	struct vk_draw_sync draw_sync;

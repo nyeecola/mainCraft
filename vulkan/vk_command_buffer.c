@@ -79,10 +79,11 @@ free_command_buffer_vector(VkCommandBuffer *cmd_buffers[])
 int
 create_cmd_submission_infra(struct vk_device *device)
 {
-	const uint32_t *family_index = device->queues.family_indices;
+	uint32_t *cmd_buffers_count = device->cmd_submission.cmd_buffers_count;
+	const uint32_t *family_index = device->cmd_submission.family_indices;
 	const uint32_t images_count = device->swapchain.images_count;
-	VkCommandBuffer **cmd_buffer = device->cmd_buffers;
-	VkCommandPool *cmd_pool = device->command_pools;
+	VkCommandBuffer **cmd_buffer = device->cmd_submission.cmd_buffers;
+	VkCommandPool *cmd_pool = device->cmd_submission.command_pools;
 
 	/* If we don't have a transfer queue we need to use the graphics queue to
 	 * transfer the buffers and images, then we need to set the flag
@@ -90,7 +91,7 @@ create_cmd_submission_infra(struct vk_device *device)
 	 * command buffers to transfer things and render things by reseting command
 	 * buffers.
 	 *  */
-	if (device->queues.queue_count[transfer])
+	if (device->cmd_submission.queue_count[transfer])
 		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics], 0);
 	else
 		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics],
@@ -103,9 +104,9 @@ create_cmd_submission_infra(struct vk_device *device)
 	if (!cmd_buffer[graphics])
 		goto cleanup_command_pools;
 
-	device->cmd_buffers_count[graphics] = images_count;
+	cmd_buffers_count[graphics] = images_count;
 
-	if (device->queues.queue_count[transfer]) {
+	if (device->cmd_submission.queue_count[transfer]) {
 		cmd_pool[transfer] = create_command_pool(device->logical_device, family_index[transfer],
 												 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 		if (cmd_pool[transfer] == VK_NULL_HANDLE)
@@ -116,7 +117,7 @@ create_cmd_submission_infra(struct vk_device *device)
 		if (!cmd_buffer[transfer])
 			goto cleanup_command_pools;
 
-		device->cmd_buffers_count[transfer] = images_count;
+		cmd_buffers_count[transfer] = images_count;
 	}
 
 	return 0;
