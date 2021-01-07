@@ -62,8 +62,8 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	struct vk_render *render = &dev->render;
 	struct vk_swapchain *swapchain = &dev->swapchain;
 
-	cleanup_command_pools(dev->logical_device, dev->command_pools);
-	free_command_buffer_vector(dev->cmd_buffers);
+	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
+	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
 	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
@@ -77,6 +77,7 @@ init_vk(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
 	struct vk_vertex_object *triangle = &dev->game_objs.dummy_triangle;
+	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 
 	program->app_info = create_app_info();
 	program->instance = create_instance(&program->app_info);
@@ -114,7 +115,7 @@ init_vk(struct vk_program *program)
 	if (create_index_buffer(dev, triangle))
 		goto destroy_vertex_shader;
 
-	if (record_draw_cmd(dev->cmd_buffers, &dev->swapchain, &dev->render, &dev->game_objs))
+	if (record_draw_cmd(cmd_sub->cmd_buffers, &dev->swapchain, &dev->render, &dev->game_objs))
 		goto destroy_index_shader;
 
 	if (create_sync_objects(dev->logical_device, &dev->draw_sync, dev->swapchain.images_count))
@@ -164,6 +165,7 @@ int
 recreate_render_and_presentation_infra(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
+	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 	int width = 0, height = 0;
 
 	glfwGetFramebufferSize(program->window, &width, &height);
@@ -184,7 +186,7 @@ recreate_render_and_presentation_infra(struct vk_program *program)
 		return -1;
 	}
 
-	if (record_draw_cmd(dev->cmd_buffers, &dev->swapchain, &dev->render, &dev->game_objs))
+	if (record_draw_cmd(cmd_sub->cmd_buffers, &dev->swapchain, &dev->render, &dev->game_objs))
 		return -1;
 
 	return 0;

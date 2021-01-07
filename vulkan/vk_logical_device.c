@@ -9,7 +9,7 @@
 
 
 int
-find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, VkSurfaceKHR surface)
+find_queue_families(VkPhysicalDevice physical_device, struct vk_cmd_submission *cmd_sub, VkSurfaceKHR surface)
 {
 	uint32_t i, queue_queue_count = 0;
 	VkQueueFamilyProperties *queue_family;
@@ -38,23 +38,23 @@ find_queue_families(VkPhysicalDevice physical_device, struct vk_queues *queues, 
 		 * this isn't necessary
 		 * */
 		if (present_support && queue_family[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			queues->family_indices[present]= i;
-			queues->queue_count[present] = queue_family[i].queueCount;
+			cmd_sub->family_indices[present]= i;
+			cmd_sub->queue_count[present] = queue_family[i].queueCount;
 		} if (queue_family[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			queues->family_indices[graphics] = i;
-			queues->queue_count[graphics] = queue_family[i].queueCount;
+			cmd_sub->family_indices[graphics] = i;
+			cmd_sub->queue_count[graphics] = queue_family[i].queueCount;
 		} else if (queue_family[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
-			queues->family_indices[transfer] = i;
-			queues->queue_count[transfer] = queue_family[i].queueCount;
+			cmd_sub->family_indices[transfer] = i;
+			cmd_sub->queue_count[transfer] = queue_family[i].queueCount;
 		} else if (queue_family[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-			queues->family_indices[compute] = i;
-			queues->queue_count[compute] = queue_family[i].queueCount;
+			cmd_sub->family_indices[compute] = i;
+			cmd_sub->queue_count[compute] = queue_family[i].queueCount;
 		} else if (queue_family[i].queueFlags & VK_QUEUE_PROTECTED_BIT) {
-			queues->family_indices[protectedBit] = i;
-			queues->queue_count[protectedBit] = queue_family[i].queueCount;
+			cmd_sub->family_indices[protectedBit] = i;
+			cmd_sub->queue_count[protectedBit] = queue_family[i].queueCount;
 		} else if (queue_family[i].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) {
-			queues->family_indices[sparseBindingBit] = i;
-			queues->queue_count[sparseBindingBit] = queue_family[i].queueCount;
+			cmd_sub->family_indices[sparseBindingBit] = i;
+			cmd_sub->queue_count[sparseBindingBit] = queue_family[i].queueCount;
 		}
 	}
 
@@ -184,7 +184,7 @@ bool
 is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_device, VkSurfaceKHR surface)
 {
 	bool extensions_supported = check_device_extension_support(physical_device);
-	struct vk_queues queues = { };
+	struct vk_cmd_submission cmd_sub = { };
 	struct surface_support surface_support = { };
 
 	if (!extensions_supported)
@@ -196,14 +196,14 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 	if (!surface_support.formats_count || !surface_support.present_modes_count)
 		goto surface_support_cleanup;
 
-	if (find_queue_families(physical_device, &queues, surface))
+	if (find_queue_families(physical_device, &cmd_sub, surface))
 		goto surface_support_cleanup;
 
-	if (!queues.queue_count[graphics] || !queues.queue_count[present])
+	if (!cmd_sub.queue_count[graphics] || !cmd_sub.queue_count[present])
 		goto surface_support_cleanup;
 
 	picked_device->physical_device = physical_device;
-	picked_device->queues = queues;
+	picked_device->cmd_submission = cmd_sub;
 	picked_device->swapchain.support = surface_support;
 
 	return true;
@@ -260,8 +260,9 @@ create_logical_device(struct vk_device *device)
 {
 	uint64_t unique_queue_families[queues_count], i, unique_family_count = 0;
 	VkDeviceQueueCreateInfo queue_create_infos[queues_count];
-	struct vk_queues *queues = &device->queues;
-	uint32_t *family_indices = queues->family_indices;
+	struct vk_cmd_submission *cmd_sub = &device->cmd_submission;
+	uint32_t *family_indices = cmd_sub->family_indices;
+	VkQueue *queue_handles = cmd_sub->queue_handles;
 	const float queue_priority = 1.0f;
 	VkResult result;
 
@@ -269,10 +270,10 @@ create_logical_device(struct vk_device *device)
 	 * if this GPU have a Graphics/Present queue
 	 */
 	unique_queue_families[unique_family_count++] = family_indices[graphics];
-	if (queues->family_indices[present] != queues->family_indices[graphics])
-		unique_queue_families[unique_family_count++] = queues->family_indices[present];
-	if (queues->queue_count[transfer])
-		unique_queue_families[unique_family_count++] = queues->family_indices[transfer];
+	if (family_indices[present] != family_indices[graphics])
+		unique_queue_families[unique_family_count++] = family_indices[present];
+	if (cmd_sub->queue_count[transfer])
+		unique_queue_families[unique_family_count++] = family_indices[transfer];
 
 	for (i = 0; i < unique_family_count; i++) {
 		VkDeviceQueueCreateInfo queue_create_info = {
@@ -305,14 +306,15 @@ create_logical_device(struct vk_device *device)
 	}
 
 	// And the retrieve the queues
-	vkGetDeviceQueue(device->logical_device, family_indices[graphics], 0, &queues->handles[graphics]);
-	vkGetDeviceQueue(device->logical_device, family_indices[present], 0, &queues->handles[present]);
-	queues->queue_count[graphics] = 1;
-	queues->queue_count[present] = 1;
-	if (queues->queue_count[transfer]) {
-		vkGetDeviceQueue(device->logical_device, family_indices[transfer], 0, &queues->handles[transfer]);
-		queues->queue_count[transfer] = 1;
+	vkGetDeviceQueue(device->logical_device, family_indices[graphics], 0, &queue_handles[graphics]);
+	vkGetDeviceQueue(device->logical_device, family_indices[present], 0, &queue_handles[present]);
+	if (cmd_sub->queue_count[transfer]) {
+		vkGetDeviceQueue(device->logical_device, family_indices[transfer], 0, &queue_handles[transfer]);
+		cmd_sub->queue_count[transfer] = 1;
 	}
+
+	cmd_sub->queue_count[graphics] = 1;
+	cmd_sub->queue_count[present] = 1;
 
 	return 0;
 }
