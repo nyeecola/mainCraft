@@ -1,6 +1,11 @@
+#define GLM_FORCE_RADIANS
+#include <cglm/project.h>
+#include <cglm/cglm.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "vk_resource_manager.h"
+#include "game_objects.h"
 #include "vk_draw.h"
 #include "utils.h"
 
@@ -72,6 +77,33 @@ sync_objects_cleanup(VkDevice logical_device, struct vk_draw_sync *sync)
 	free(sync->images_in_flight);
 }
 
+void
+calculate_projection(mat4 projection, VkExtent2D swapchain_extent)
+{
+	glm_perspective(glm_rad(45.0f), swapchain_extent.width / (float) swapchain_extent.height, 0.1f, 10.0f, projection);
+	// This is necessary because this library was writen with the opengl in
+	// mind, but vulkan inverts the y axis ¬¬
+	projection[1][1] *= -1;
+}
+
+void
+update_view_projection(const VkDevice logical_device, struct view_projection *camera, uint32_t current_image)
+{
+	struct MVP mvp = { .model = GLM_MAT4_IDENTITY_INIT };
+	mat4 view;
+	void* data;
+
+	glm_rotate(mvp.model,  glm_rad(25.0f), (vec3) { 0.0f, 0.0f, 1.0f });
+	glm_lookat((vec3) { 2.0f, 2.0f, 2.0f }, (vec3) { 0.0f, 0.0f, 0.0f }, (vec3) { 0.0f, 0.0f, 1.0f }, view);
+
+	// TODO: remove the model calculation and when instance render begin
+	glm_mat4_mulN((mat4 *[]){ &camera->proj, &view }, 2, mvp.view_proj);
+
+	vkMapMemory(logical_device, camera->buffers_memory[current_image], 0, sizeof(struct MVP), 0, &data);
+	memcpy(data, &mvp, sizeof(struct MVP));
+	vkUnmapMemory(logical_device, camera->buffers_memory[current_image]);
+}
+
 int
 draw_frame(struct vk_program *program, uint8_t *current_frame)
 {
@@ -81,6 +113,7 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 	VkSemaphore image_available_semaphore = sync->image_available_semaphore[*current_frame];
 	VkSemaphore render_finished_semaphore = sync->render_finished_semaphore[*current_frame];
 	VkFence in_flight_fences = sync->in_flight_fences[*current_frame];
+	struct view_projection *camera = &dev->game_objs.camera;
 	const VkQueue *queues = dev->cmd_submission.queue_handles;
 	bool *framebuffer_resized = &dev->swapchain.framebuffer_resized;
 	VkCommandBuffer **cmd_buffers = dev->cmd_submission.cmd_buffers;
@@ -130,6 +163,8 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 		print_error("Failed to reset fences!");
 		return -1;
 	}
+
+	update_view_projection(logical_device, camera, imageIndex);
 
 	result = vkQueueSubmit(queues[graphics], 1, &submitInfo, in_flight_fences);
 	if (result != VK_SUCCESS) {

@@ -130,10 +130,11 @@ return_error:
 }
 
 int
-record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain,
+record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchain,
 				struct vk_render *render, struct vk_game_objects *game_objects)
 {
 	struct vk_vertex_object *obj = &game_objects->dummy_triangle;
+	VkCommandBuffer **cmd_buffers = cmd_sub->cmd_buffers;
 	VkBuffer vertex_buffers[] = { obj->vertex_buffer };
 	VkBuffer index_buffer = obj->index_buffer;
 	uint32_t index_count = obj->indices_count;
@@ -175,6 +176,9 @@ record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain,
 		vkCmdBindVertexBuffers(cmd_buffers[graphics][i], 0, array_size(vertex_buffers), vertex_buffers, offsets);
 
 		vkCmdBindIndexBuffer(cmd_buffers[graphics][i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdBindDescriptorSets(cmd_buffers[graphics][i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+								render->pipeline_layout, 0, 1, &cmd_sub->descriptor_sets[i], 0, NULL);
 
 		vkCmdDrawIndexed(cmd_buffers[graphics][i], index_count, 1, 0, 0, 0);
 

@@ -3,14 +3,22 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <cglm/cglm.h>
 #include <vulkan/vulkan.h>
+#include <cglm/cglm.h>
 #include <stdbool.h>
 
 #include "vk_constants.h"
 
 
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
+
+struct view_projection {
+	VkBuffer *buffers;
+	uint32_t buffer_count;
+	VkDeviceMemory *buffers_memory;
+	uint32_t buffer_memory_count;
+	mat4 proj;
+};
 
 struct vk_vertex_object {
 	VkBuffer vertex_buffer;
@@ -25,6 +33,7 @@ struct vk_vertex_object {
 
 struct vk_game_objects {
 	struct vk_vertex_object dummy_triangle;
+	struct view_projection camera;
 };
 
 struct vk_draw_sync {
@@ -44,6 +53,9 @@ struct vk_cmd_submission {
 	VkQueue queue_handles[queues_count];
 	/* Per family in use queue count*/
 	uint32_t handles_count[queues_count];
+	VkDescriptorPool descriptor_pool;
+	VkDescriptorSet *descriptor_sets;
+	uint32_t descriptors_count;
 };
 
 struct vk_render {
@@ -52,6 +64,7 @@ struct vk_render {
 	VkPipelineLayout pipeline_layout;;
 	VkFramebuffer *swapChain_framebuffers;
 	uint32_t framebuffer_count;
+	VkDescriptorSetLayout descriptor_set_layout;
 };
 
 struct surface_support {

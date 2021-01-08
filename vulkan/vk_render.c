@@ -200,7 +200,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 		.lineWidth = 1.0f,
 		.cullMode = VK_CULL_MODE_BACK_BIT,
 		// It needs to be counter clockwise for reason that I don't understand
-		 .frontFace = VK_FRONT_FACE_CLOCKWISE,
+		//.frontFace = VK_FRONT_FACE_CLOCKWISE,
+		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		.depthBiasEnable = VK_FALSE,
 		.depthBiasConstantFactor = 0.0f, // Optional
 		.depthBiasClamp = 0.0f, // Optional
@@ -246,8 +247,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 0,
-		.pSetLayouts = VK_NULL_HANDLE
+		.setLayoutCount = 1,
+		.pSetLayouts = &render->descriptor_set_layout
 	};
 
 	result = vkCreatePipelineLayout(logical_device, &pipeline_layout_info, NULL, &render->pipeline_layout);

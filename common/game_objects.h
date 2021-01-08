@@ -1,7 +1,15 @@
 #ifndef GAME_OBJECTS_H
 #define GAME_OBJECTS_H
 
+#include <stdalign.h>
+#include <cglm/cglm.h>
+
 #include "vk_types.h"
+
+struct MVP {
+	alignas(16) mat4 model;
+	alignas(16) mat4 view_proj;
+};
 
 struct vertex {
 	vec2 pos;

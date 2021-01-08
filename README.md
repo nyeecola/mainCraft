@@ -3,6 +3,7 @@ A C version of the 'Minecraft in 500 lines of python'.
 
 ## Requirements
 
+> * C11 compatible compiler([Clang](https://releases.llvm.org/download.html) / [GCC](https://repology.org/project/gcc/packages))
 > * [FTGL](https://repology.org/project/ftgl/packages) version 2.1.3rc5-9
 > * [glfw](https://repology.org/project/glfw/packages) version 3.1.2-1 or higher
 > * OpenGL 2.0 or higher
