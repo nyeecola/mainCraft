@@ -21,7 +21,7 @@ int
 create_cmd_submission_infra(struct vk_device *device);
 
 int
-record_draw_cmd(VkCommandBuffer *cmd_buffers[], struct vk_swapchain *swapchain,
+record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchain,
 				struct vk_render *render, struct vk_game_objects *game_objects);
 
 VkResult

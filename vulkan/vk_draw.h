@@ -14,4 +14,7 @@ sync_objects_cleanup(VkDevice logical_device, struct vk_draw_sync *sync);
 int
 draw_frame(struct vk_program *program, uint8_t *current_frame);
 
+void
+calculate_projection(mat4 projection, VkExtent2D swapchain_extent);
+
 #endif //VK_DRAW_H
