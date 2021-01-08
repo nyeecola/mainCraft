@@ -36,6 +36,11 @@ struct vk_game_objects {
 	struct view_projection camera;
 };
 
+struct vk_device_properties {
+	VkPhysicalDeviceFeatures supported_features;
+	VkPhysicalDeviceProperties device_properties;
+};
+
 struct vk_draw_sync {
 	VkSemaphore image_available_semaphore[MAX_FRAMES_IN_FLIGHT];
 	VkSemaphore render_finished_semaphore[MAX_FRAMES_IN_FLIGHT];
@@ -99,6 +104,7 @@ struct vk_device {
 	struct vk_render render;
 	struct vk_draw_sync draw_sync;
 	struct vk_game_objects game_objs;
+	struct vk_device_properties device_properties;
 };
 
 struct vk_program {

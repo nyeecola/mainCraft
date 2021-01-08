@@ -183,10 +183,13 @@ surface_support_cleanup(struct surface_support *surface_support)
 bool
 is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_device, VkSurfaceKHR surface)
 {
-	bool extensions_supported = check_device_extension_support(physical_device);
+	VkPhysicalDeviceProperties *device_properties = &picked_device->device_properties.device_properties;
+	VkPhysicalDeviceFeatures supported_features;
 	struct vk_cmd_submission cmd_sub = { };
 	struct surface_support surface_support = { };
+	bool extensions_supported;
 
+	extensions_supported = check_device_extension_support(physical_device);
 	if (!extensions_supported)
 		goto return_false;
 
@@ -202,9 +205,15 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 	if (!cmd_sub.queue_count[graphics] || !cmd_sub.queue_count[present])
 		goto surface_support_cleanup;
 
+	vkGetPhysicalDeviceFeatures(physical_device, &supported_features);
+	if(!supported_features.samplerAnisotropy)
+		goto surface_support_cleanup;
+
+	vkGetPhysicalDeviceProperties(physical_device, device_properties);
 	picked_device->physical_device = physical_device;
 	picked_device->cmd_submission = cmd_sub;
 	picked_device->swapchain.support = surface_support;
+	picked_device->device_properties.supported_features = supported_features;
 
 	return true;
 
