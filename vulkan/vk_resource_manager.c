@@ -11,6 +11,7 @@
 #include "vk_backend.h"
 #include "vk_buffer.h"
 #include "vk_render.h"
+#include "vk_image.h"
 #include "vk_draw.h"
 #include "utils.h"
 
@@ -25,7 +26,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 	if (create_swapchain(dev, program->surface, program->window))
 		goto exit_error;
 
-	if (create_image_views(dev->logical_device, swapchain))
+	if (create_swapchain_image_views(dev->logical_device, swapchain))
 		goto destroy_swapchain;
 
 	render->render_pass = create_render_pass(dev->logical_device, swapchain->state);
