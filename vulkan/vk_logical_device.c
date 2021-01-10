@@ -295,12 +295,17 @@ create_logical_device(struct vk_device *device)
 		queue_create_infos[i] = queue_create_info;
 	}
 
+	VkPhysicalDeviceFeatures device_features = {
+		.samplerAnisotropy = VK_TRUE
+	};
+
 	VkDeviceCreateInfo create_info = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pQueueCreateInfos = queue_create_infos,
 		.queueCreateInfoCount = unique_family_count,
 		.enabledExtensionCount = array_size(device_extensions),
 		.ppEnabledExtensionNames = device_extensions,
+		.pEnabledFeatures = &device_features
 	};
 
 	if (enable_validation_layers) {

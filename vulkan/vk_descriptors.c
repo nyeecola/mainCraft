@@ -33,8 +33,8 @@ get_vertex_attribute_descriptions(uint32_t binding, uint32_t first_location)
 
 	attribute_descriptions[1].binding = binding;
 	attribute_descriptions[1].location = first_location + 1;
-	attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attribute_descriptions[1].offset = offsetof(struct vertex, color);
+	attribute_descriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+	attribute_descriptions[1].offset = offsetof(struct vertex, texCoord);
 
 	return attribute_descriptions;
 }
@@ -51,6 +51,13 @@ create_descriptor_set_layout_binding(VkDevice logical_device)
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = 1,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 1,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImmutableSamplers = NULL,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		}
 	};
 
@@ -80,6 +87,10 @@ create_descriptor_pool(VkDevice logical_device, struct vk_swapchain *swapchain)
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = swapchain->images_count
 		},
+		(VkDescriptorPoolSize) {
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = swapchain->images_count
+		}
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {
@@ -142,6 +153,12 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 			.range = sizeof(struct MVP),
 		};
 
+		VkDescriptorImageInfo image_info = {
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.imageView = dev->game_objs.dummy_triangle.texture_image_view,
+			.sampler = dev->render.texture_sampler
+		};
+
 		VkWriteDescriptorSet descriptor_writes[] = {
 			(VkWriteDescriptorSet) {
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -152,6 +169,15 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1,
 				.pBufferInfo = &buffer_info
+			},
+			(VkWriteDescriptorSet) {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptor_sets[i],
+				.dstBinding = 1,
+				.dstArrayElement = 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = 1,
+				.pImageInfo = &image_info
 			}
 		};
 

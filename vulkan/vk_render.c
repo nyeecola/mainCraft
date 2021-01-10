@@ -128,7 +128,7 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 
 	VkVertexInputAttributeDescription attribute_descriptions_vector[] = {
 		vertex_attribute_descriptions[0],
-		vertex_attribute_descriptions[1],
+		vertex_attribute_descriptions[1]
 	};
 
 	VkVertexInputBindingDescription binding_description_vector[] = {

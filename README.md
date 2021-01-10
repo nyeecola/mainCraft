@@ -9,6 +9,7 @@ A C version of the 'Minecraft in 500 lines of python'.
 > * OpenGL 2.0 or higher
 > * Vulkan 1.0 or higher
 > * [cglm](https://repology.org/project/cglm/packages)
+> * [stb](https://repology.org/project/stb/packages)
 
 ## Intructions
 
