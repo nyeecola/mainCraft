@@ -29,6 +29,9 @@ struct vk_vertex_object {
 	uint64_t indices_count;
 	VkBuffer index_buffer;
 	VkDeviceMemory index_buffer_memory;
+	VkImage texture_image;
+	VkDeviceMemory texture_image_memory;
+	VkImageView texture_image_view;
 };
 
 struct vk_game_objects {
@@ -70,6 +73,7 @@ struct vk_render {
 	VkFramebuffer *swapChain_framebuffers;
 	uint32_t framebuffer_count;
 	VkDescriptorSetLayout descriptor_set_layout;
+	VkSampler texture_sampler;
 };
 
 struct surface_support {

@@ -9,6 +9,7 @@
 #include "game_objects.h"
 #include "vk_instance.h"
 #include "vk_backend.h"
+#include "vk_texture.h"
 #include "vk_buffer.h"
 #include "vk_render.h"
 #include "vk_image.h"
@@ -134,6 +135,7 @@ init_vk(struct vk_program *program)
 	struct vk_device *dev = &program->device;
 	struct vk_vertex_object *triangle = &dev->game_objs.dummy_triangle;
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
+	struct vk_render *render = &dev->render;
 
 	program->app_info = create_app_info();
 	program->instance = create_instance(&program->app_info);
@@ -156,9 +158,20 @@ init_vk(struct vk_program *program)
 	if (create_cmd_submission_infra(dev, dev->swapchain.support.capabilities.minImageCount + 1))
 		goto destroy_device;
 
+	if (create_texture_image(dev, "assets/textures/grass_block_side.png", &triangle->texture_image, &triangle->texture_image_memory))
+		goto destroy_command_pools;
+
+	triangle->texture_image_view = create_texture_image_view(dev->logical_device, triangle->texture_image);
+	if (triangle->texture_image_view == VK_NULL_HANDLE)
+		goto destroy_texture_image;
+
+	render->texture_sampler = create_texture_sampler(dev->logical_device, &dev->device_properties.device_properties);
+	if (render->texture_sampler == VK_NULL_HANDLE)
+		goto destroy_texture_image_view;
+
 	dev->render.descriptor_set_layout = create_descriptor_set_layout_binding(dev->logical_device);
 	if (dev->render.descriptor_set_layout == VK_NULL_HANDLE)
-		goto destroy_descriptor_pool;
+		goto destroy_texture_sampler;
 
 	if (create_render_and_presentation_infra(program))
 		goto destroy_descriptor_set_layout;
@@ -196,7 +209,14 @@ destroy_render_and_presentation_infra:
 	destroy_render_and_presentation_infra(dev);
 destroy_descriptor_set_layout:
 	vkDestroyDescriptorSetLayout(dev->logical_device, dev->render.descriptor_set_layout, NULL);
-destroy_descriptor_pool:
+destroy_texture_sampler:
+	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
+destroy_texture_image_view:
+	vkDestroyImageView(dev->logical_device, triangle->texture_image_view, NULL);
+destroy_texture_image:
+	vkDestroyImage(dev->logical_device, triangle->texture_image, NULL);
+	vkFreeMemory(dev->logical_device, triangle->texture_image_memory, NULL);
+destroy_command_pools:
 	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 destroy_device:
@@ -216,6 +236,7 @@ vk_cleanup(struct vk_program program)
 {
 	struct vk_device *dev = &program.device;
 	struct vk_vertex_object *triangle = &dev->game_objs.dummy_triangle;
+	struct vk_render *render = &dev->render;
 
 	/* Destroy the draw synchronization primitives */
 	sync_objects_cleanup(dev->logical_device, &dev->draw_sync);
@@ -225,6 +246,12 @@ vk_cleanup(struct vk_program program)
 	vkFreeMemory(dev->logical_device, triangle->index_buffer_memory, NULL);
 	vkDestroyBuffer(dev->logical_device, triangle->vertex_buffer, NULL);
 	vkFreeMemory(dev->logical_device, triangle->vertex_buffer_memory, NULL);
+
+	/* clean texture resources */
+	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
+	vkDestroyImageView(dev->logical_device, triangle->texture_image_view, NULL);
+	vkDestroyImage(dev->logical_device, triangle->texture_image, NULL);
+	vkFreeMemory(dev->logical_device, triangle->texture_image_memory, NULL);
 
 	destroy_render_and_presentation_infra(dev);
 

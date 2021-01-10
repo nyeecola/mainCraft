@@ -13,7 +13,7 @@ struct MVP {
 
 struct vertex {
 	vec2 pos;
-	vec3 color;
+	vec2 texCoord;
 };
 
 extern struct vertex triangle_vertices[4];
