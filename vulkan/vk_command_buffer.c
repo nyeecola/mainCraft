@@ -77,11 +77,10 @@ free_command_buffer_vector(VkCommandBuffer *cmd_buffers[])
 }
 
 int
-create_cmd_submission_infra(struct vk_device *device)
+create_cmd_submission_infra(struct vk_device *device, uint32_t buffer_count)
 {
 	uint32_t *cmd_buffers_count = device->cmd_submission.cmd_buffers_count;
 	const uint32_t *family_index = device->cmd_submission.family_indices;
-	const uint32_t images_count = device->swapchain.images_count;
 	VkCommandBuffer **cmd_buffer = device->cmd_submission.cmd_buffers;
 	VkCommandPool *cmd_pool = device->cmd_submission.command_pools;
 
@@ -100,11 +99,11 @@ create_cmd_submission_infra(struct vk_device *device)
 		goto return_error;
 
 	cmd_buffer[graphics] = create_command_buffers(device->logical_device, cmd_pool[graphics],
-												  VK_COMMAND_BUFFER_LEVEL_PRIMARY, images_count);
+												  VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
 	if (!cmd_buffer[graphics])
 		goto cleanup_command_pools;
 
-	cmd_buffers_count[graphics] = images_count;
+	cmd_buffers_count[graphics] = buffer_count;
 
 	if (device->cmd_submission.queue_count[transfer]) {
 		cmd_pool[transfer] = create_command_pool(device->logical_device, family_index[transfer],
@@ -113,11 +112,11 @@ create_cmd_submission_infra(struct vk_device *device)
 			goto cleanup_command_pools;
 
 		cmd_buffer[transfer] = create_command_buffers(device->logical_device, cmd_pool[transfer],
-													  VK_COMMAND_BUFFER_LEVEL_PRIMARY, images_count);
+													  VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
 		if (!cmd_buffer[transfer])
 			goto cleanup_command_pools;
 
-		cmd_buffers_count[transfer] = images_count;
+		cmd_buffers_count[transfer] = buffer_count;
 	}
 
 	return 0;
