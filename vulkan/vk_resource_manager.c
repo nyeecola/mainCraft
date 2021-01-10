@@ -52,9 +52,6 @@ create_render_and_presentation_infra(struct vk_program *program)
 	if (create_descriptor_sets(dev, &dev->cmd_submission, render->descriptor_set_layout))
 		goto destroy_descriptor_pool;
 
-	if (create_cmd_submission_infra(dev))
-		goto destroy_descriptor_pool;
-
 	return 0;
 
 	/* Descriptor sets are destroyed *here* */
@@ -91,10 +88,6 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	free(camera->buffers_memory);
 	free(camera->buffers);
 
-	/* Free command submission resources */
-	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
-	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
-
 	/* Cleanup pipeline resources */
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
 	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
@@ -104,6 +97,35 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	/* Cleanup swapchain resources*/
 	image_views_cleanup(dev->logical_device, swapchain->image_views, swapchain->images_count);
 	vkDestroySwapchainKHR(dev->logical_device, swapchain->handle, NULL);
+}
+
+int
+_create_render_and_presentation_infra(struct vk_program *program)
+{
+	struct vk_device *dev = &program->device;
+
+	if (create_render_and_presentation_infra(program))
+		goto return_error;
+
+	if (create_cmd_submission_infra(dev, dev->swapchain.images_count))
+		goto destroy_render_and_presentation_infra;
+
+	return 0;
+
+destroy_render_and_presentation_infra:
+	destroy_render_and_presentation_infra(dev);
+return_error:
+	return -1;
+}
+
+void
+_destroy_render_and_presentation_infra(struct vk_device *dev)
+{
+	destroy_render_and_presentation_infra(dev);
+
+	/* Free command submission resources */
+	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
+	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 }
 
 int
@@ -131,9 +153,12 @@ init_vk(struct vk_program *program)
 	if (create_logical_device(dev))
 		goto destroy_surface_support;
 
+	if (create_cmd_submission_infra(dev, dev->swapchain.support.capabilities.minImageCount + 1))
+		goto destroy_device;
+
 	dev->render.descriptor_set_layout = create_descriptor_set_layout_binding(dev->logical_device);
 	if (dev->render.descriptor_set_layout == VK_NULL_HANDLE)
-		goto destroy_device;
+		goto destroy_descriptor_pool;
 
 	if (create_render_and_presentation_infra(program))
 		goto destroy_descriptor_set_layout;
@@ -171,6 +196,9 @@ destroy_render_and_presentation_infra:
 	destroy_render_and_presentation_infra(dev);
 destroy_descriptor_set_layout:
 	vkDestroyDescriptorSetLayout(dev->logical_device, dev->render.descriptor_set_layout, NULL);
+destroy_descriptor_pool:
+	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
+	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 destroy_device:
 	vkDestroyDevice(dev->logical_device, NULL);
 destroy_surface_support:
@@ -199,6 +227,10 @@ vk_cleanup(struct vk_program program)
 	vkFreeMemory(dev->logical_device, triangle->vertex_buffer_memory, NULL);
 
 	destroy_render_and_presentation_infra(dev);
+
+	/* Free command submission resources */
+	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
+	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 
 	/* Destroy the uniform buffer MVP descriptor set layout, used in the graphics pipeline */
 	vkDestroyDescriptorSetLayout(dev->logical_device, dev->render.descriptor_set_layout, NULL);
@@ -231,8 +263,8 @@ recreate_render_and_presentation_infra(struct vk_program *program)
 	// It is needed because we had a windows resize
 	query_surface_support(dev->physical_device, program->surface, &dev->swapchain.support);
 
-	destroy_render_and_presentation_infra(dev);
-	if (create_render_and_presentation_infra(program)) {
+	_destroy_render_and_presentation_infra(dev);
+	if (_create_render_and_presentation_infra(program)) {
 		print_error("Failed to recreate the render and presentation infrastructure!");
 		return -1;
 	}

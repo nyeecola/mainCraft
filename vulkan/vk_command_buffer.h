@@ -18,7 +18,7 @@ void
 free_command_buffer_vector(VkCommandBuffer *cmd_buffers[]);
 
 int
-create_cmd_submission_infra(struct vk_device *device);
+create_cmd_submission_infra(struct vk_device *device, uint32_t buffer_count);
 
 int
 record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchain,
