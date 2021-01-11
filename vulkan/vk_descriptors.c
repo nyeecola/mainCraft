@@ -24,7 +24,7 @@ get_vertex_attribute_descriptions(uint32_t binding, uint32_t first_location)
 
 	attribute_descriptions = malloc(sizeof(VkVertexInputAttributeDescription) * 2);
 	if (!attribute_descriptions)
-		return NULL;
+		return VK_NULL_HANDLE;
 
 	attribute_descriptions[0].binding = binding;
 	attribute_descriptions[0].location = first_location;

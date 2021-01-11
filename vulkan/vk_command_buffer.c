@@ -36,7 +36,7 @@ alloc_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBuff
 	command_buffers = malloc(sizeof(VkCommandBuffer) * count);
 	if (!command_buffers) {
 		print_error("Failed to allocate command buffer handle vector!");
-		return NULL;
+		return VK_NULL_HANDLE;
 	}
 
 	VkCommandBufferAllocateInfo alloc_info = {
@@ -50,7 +50,7 @@ alloc_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBuff
 	if (result != VK_SUCCESS) {
 		print_error("Failed to allocate command buffer handles!");
 		free(command_buffers);
-		return NULL;
+		return VK_NULL_HANDLE;
 	}
 
 	return command_buffers;
