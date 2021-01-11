@@ -104,11 +104,16 @@ int
 _create_render_and_presentation_infra(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
+	VkCommandBuffer **cmd_buffer = dev->cmd_submission.cmd_buffers;
+	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
+	uint32_t buffer_count = dev->swapchain.images_count;
 
 	if (create_render_and_presentation_infra(program))
 		goto return_error;
 
-	if (create_cmd_submission_infra(dev, dev->swapchain.images_count))
+	cmd_buffer[graphics] = alloc_command_buffers(dev->logical_device, cmd_pool[graphics],
+												 VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
+	if (!cmd_buffer[graphics])
 		goto destroy_render_and_presentation_infra;
 
 	return 0;
@@ -122,10 +127,14 @@ return_error:
 void
 _destroy_render_and_presentation_infra(struct vk_device *dev)
 {
+	uint32_t *cmd_buffers_count = dev->cmd_submission.cmd_buffers_count;
+	VkCommandBuffer **cmd_buffer = dev->cmd_submission.cmd_buffers;
+	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
+
 	destroy_render_and_presentation_infra(dev);
 
-	/* Free command submission resources */
-	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
+	/* Free grahics command buffers */
+	vkFreeCommandBuffers(dev->logical_device, cmd_pool[graphics], cmd_buffers_count[graphics], cmd_buffer[graphics]);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 }
 
@@ -155,10 +164,13 @@ init_vk(struct vk_program *program)
 	if (create_logical_device(dev))
 		goto destroy_surface_support;
 
-	if (create_cmd_submission_infra(dev, dev->swapchain.support.capabilities.minImageCount + 1))
+	if (create_command_pools(dev))
 		goto destroy_device;
 
-	if (create_texture_image(dev, "assets/textures/grass_block_side.png", &triangle->texture_image, &triangle->texture_image_memory))
+	if (create_command_buffers(dev, dev->swapchain.support.capabilities.minImageCount + 1))
+		goto destroy_command_pools;
+
+	if (create_texture_image(dev, "assets/textures/sand.png", &triangle->texture_image, &triangle->texture_image_memory))
 		goto destroy_command_pools;
 
 	triangle->texture_image_view = create_texture_image_view(dev->logical_device, triangle->texture_image);
