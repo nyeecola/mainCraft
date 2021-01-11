@@ -5,11 +5,14 @@
 
 #include "vk_types.h"
 
-VkCommandPool
-create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoolCreateFlags flags);
+int
+create_command_pools(struct vk_device *dev);
+
+int
+create_command_buffers(struct vk_device *device, uint32_t buffer_count);
 
 VkCommandBuffer *
-create_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBufferLevel level, uint32_t count);
+alloc_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBufferLevel level, uint32_t count);
 
 void
 cleanup_command_pools(VkDevice logical_device, VkCommandPool command_pools[]);

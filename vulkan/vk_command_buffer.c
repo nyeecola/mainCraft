@@ -7,7 +7,7 @@
 
 
 VkCommandPool
-create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoolCreateFlags flags)
+alloc_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoolCreateFlags flags)
 {
 	VkCommandPool command_pool;
 	VkResult result;
@@ -28,7 +28,7 @@ create_command_pool(VkDevice logical_device, uint32_t family_index, VkCommandPoo
 }
 
 VkCommandBuffer *
-create_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBufferLevel level, uint32_t count)
+alloc_command_buffers(VkDevice logical_device, VkCommandPool pool, VkCommandBufferLevel level, uint32_t count)
 {
 	VkCommandBuffer *command_buffers;
 	VkResult result;
@@ -77,12 +77,10 @@ free_command_buffer_vector(VkCommandBuffer *cmd_buffers[])
 }
 
 int
-create_cmd_submission_infra(struct vk_device *device, uint32_t buffer_count)
+create_command_pools(struct vk_device *dev)
 {
-	uint32_t *cmd_buffers_count = device->cmd_submission.cmd_buffers_count;
-	const uint32_t *family_index = device->cmd_submission.family_indices;
-	VkCommandBuffer **cmd_buffer = device->cmd_submission.cmd_buffers;
-	VkCommandPool *cmd_pool = device->cmd_submission.command_pools;
+	const uint32_t *family_index = dev->cmd_submission.family_indices;
+	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
 
 	/* If we don't have a transfer queue we need to use the graphics queue to
 	 * transfer the buffers and images, then we need to set the flag
@@ -90,39 +88,56 @@ create_cmd_submission_infra(struct vk_device *device, uint32_t buffer_count)
 	 * command buffers to transfer things and render things by reseting command
 	 * buffers.
 	 *  */
-	if (device->cmd_submission.queue_count[transfer])
-		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics], 0);
+	if (dev->cmd_submission.queue_count[transfer])
+		cmd_pool[graphics] = alloc_command_pool(dev->logical_device, family_index[graphics], 0);
 	else
-		cmd_pool[graphics] = create_command_pool(device->logical_device, family_index[graphics],
-												 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		cmd_pool[graphics] = alloc_command_pool(dev->logical_device, family_index[graphics],
+												VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	if (cmd_pool[graphics] == VK_NULL_HANDLE)
 		goto return_error;
 
-	cmd_buffer[graphics] = create_command_buffers(device->logical_device, cmd_pool[graphics],
-												  VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
+	if (dev->cmd_submission.queue_count[transfer]) {
+		cmd_pool[transfer] = alloc_command_pool(dev->logical_device, family_index[transfer],
+												VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		if (cmd_pool[transfer] == VK_NULL_HANDLE)
+			goto cleanup_command_pools;
+	}
+
+	return 0;
+
+cleanup_command_pools:
+	cleanup_command_pools(dev->logical_device, cmd_pool);
+return_error:
+	return -1;
+}
+
+int
+create_command_buffers(struct vk_device *dev, uint32_t buffer_count)
+{
+	uint32_t *cmd_buffers_count = dev->cmd_submission.cmd_buffers_count;
+	VkCommandBuffer **cmd_buffer = dev->cmd_submission.cmd_buffers;
+	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
+
+	cmd_buffer[graphics] = alloc_command_buffers(dev->logical_device, cmd_pool[graphics],
+												 VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
 	if (!cmd_buffer[graphics])
-		goto cleanup_command_pools;
+		goto return_error;
 
 	cmd_buffers_count[graphics] = buffer_count;
 
-	if (device->cmd_submission.queue_count[transfer]) {
-		cmd_pool[transfer] = create_command_pool(device->logical_device, family_index[transfer],
-												 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-		if (cmd_pool[transfer] == VK_NULL_HANDLE)
-			goto cleanup_command_pools;
-
-		cmd_buffer[transfer] = create_command_buffers(device->logical_device, cmd_pool[transfer],
-													  VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
+	if (dev->cmd_submission.queue_count[transfer]) {
+		cmd_buffer[transfer] = alloc_command_buffers(dev->logical_device, cmd_pool[transfer],
+													 VK_COMMAND_BUFFER_LEVEL_PRIMARY, buffer_count);
 		if (!cmd_buffer[transfer])
-			goto cleanup_command_pools;
+			goto destroy_graphics_command_buffer;
 
 		cmd_buffers_count[transfer] = buffer_count;
 	}
 
 	return 0;
 
-cleanup_command_pools:
-	cleanup_command_pools(device->logical_device, cmd_pool);
+destroy_graphics_command_buffer:
+	vkFreeCommandBuffers(dev->logical_device, cmd_pool[transfer], buffer_count, cmd_buffer[graphics]);
 	free_command_buffer_vector(cmd_buffer);
 return_error:
 	return -1;
