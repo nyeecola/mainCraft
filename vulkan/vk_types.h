@@ -35,7 +35,7 @@ struct vk_vertex_object {
 };
 
 struct vk_game_objects {
-	struct vk_vertex_object dummy_triangle;
+	struct vk_vertex_object cube;
 	struct view_projection camera;
 };
 

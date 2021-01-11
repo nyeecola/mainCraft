@@ -30,9 +30,9 @@ debug_vk: MACROS += -D ENABLE_VALIDATION_LAYERS
 debug_vk: debug
 
 .PHONY: shaders
-shaders: shaders/dummy_shader.vert shaders/dummy_shader.frag
-	glslangValidator -V shaders/dummy_shader.vert -o shaders/vert.spv
-	glslangValidator -V shaders/dummy_shader.frag -o shaders/frag.spv
+shaders: shaders/main_shader.vert shaders/main_shader.frag
+	glslangValidator -V shaders/main_shader.vert -o shaders/vert.spv
+	glslangValidator -V shaders/main_shader.frag -o shaders/frag.spv
 
 run: $(TARGET_EXEC)
 	./$(TARGET_EXEC)

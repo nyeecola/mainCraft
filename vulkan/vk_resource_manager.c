@@ -142,7 +142,7 @@ int
 init_vk(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
-	struct vk_vertex_object *triangle = &dev->game_objs.dummy_triangle;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 	struct vk_render *render = &dev->render;
 
@@ -170,11 +170,11 @@ init_vk(struct vk_program *program)
 	if (create_command_buffers(dev, dev->swapchain.support.capabilities.minImageCount + 1))
 		goto destroy_command_pools;
 
-	if (create_texture_image(dev, "assets/textures/sand.png", &triangle->texture_image, &triangle->texture_image_memory))
+	if (create_texture_image(dev, "assets/textures/stone_bricks.png", &cube->texture_image, &cube->texture_image_memory))
 		goto destroy_command_pools;
 
-	triangle->texture_image_view = create_texture_image_view(dev->logical_device, triangle->texture_image);
-	if (triangle->texture_image_view == VK_NULL_HANDLE)
+	cube->texture_image_view = create_texture_image_view(dev->logical_device, cube->texture_image);
+	if (cube->texture_image_view == VK_NULL_HANDLE)
 		goto destroy_texture_image;
 
 	render->texture_sampler = create_texture_sampler(dev->logical_device, &dev->device_properties.device_properties);
@@ -192,15 +192,15 @@ init_vk(struct vk_program *program)
 	 * - Add a function to from these informationsload a file or
 	 * - Create a function to do this
 	 */
-	triangle->vertices = triangle_vertices;
-	triangle->vertices_count = array_size(triangle_vertices);
-	triangle->indices = triangle_indices;
-	triangle->indices_count = array_size(triangle_indices);
+	cube->vertices = cube_vertices;
+	cube->vertices_count = array_size(cube_vertices);
+	cube->indices = cube_vertex_indices;
+	cube->indices_count = array_size(cube_vertex_indices);
 
-	if (create_vertex_buffer(dev, triangle))
+	if (create_vertex_buffer(dev, cube))
 		goto destroy_render_and_presentation_infra;
 
-	if (create_index_buffer(dev, triangle))
+	if (create_index_buffer(dev, cube))
 		goto destroy_vertex_shader;
 
 	if (record_draw_cmd(cmd_sub, &dev->swapchain, &dev->render, &dev->game_objs))
@@ -212,11 +212,11 @@ init_vk(struct vk_program *program)
 	return 0;
 
 destroy_index_shader:
-	vkDestroyBuffer(dev->logical_device, triangle->index_buffer, NULL);
-	vkFreeMemory(dev->logical_device, triangle->index_buffer_memory, NULL);
+	vkDestroyBuffer(dev->logical_device, cube->index_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->index_buffer_memory, NULL);
 destroy_vertex_shader:
-	vkDestroyBuffer(dev->logical_device, triangle->vertex_buffer, NULL);
-	vkFreeMemory(dev->logical_device, triangle->vertex_buffer_memory, NULL);
+	vkDestroyBuffer(dev->logical_device, cube->vertex_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->vertex_buffer_memory, NULL);
 destroy_render_and_presentation_infra:
 	destroy_render_and_presentation_infra(dev);
 destroy_descriptor_set_layout:
@@ -224,10 +224,10 @@ destroy_descriptor_set_layout:
 destroy_texture_sampler:
 	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
 destroy_texture_image_view:
-	vkDestroyImageView(dev->logical_device, triangle->texture_image_view, NULL);
+	vkDestroyImageView(dev->logical_device, cube->texture_image_view, NULL);
 destroy_texture_image:
-	vkDestroyImage(dev->logical_device, triangle->texture_image, NULL);
-	vkFreeMemory(dev->logical_device, triangle->texture_image_memory, NULL);
+	vkDestroyImage(dev->logical_device, cube->texture_image, NULL);
+	vkFreeMemory(dev->logical_device, cube->texture_image_memory, NULL);
 destroy_command_pools:
 	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
@@ -247,23 +247,23 @@ void
 vk_cleanup(struct vk_program program)
 {
 	struct vk_device *dev = &program.device;
-	struct vk_vertex_object *triangle = &dev->game_objs.dummy_triangle;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_render *render = &dev->render;
 
 	/* Destroy the draw synchronization primitives */
 	sync_objects_cleanup(dev->logical_device, &dev->draw_sync);
 
 	/* Destroy vertex and index buffer and buffer memory */
-	vkDestroyBuffer(dev->logical_device, triangle->index_buffer, NULL);
-	vkFreeMemory(dev->logical_device, triangle->index_buffer_memory, NULL);
-	vkDestroyBuffer(dev->logical_device, triangle->vertex_buffer, NULL);
-	vkFreeMemory(dev->logical_device, triangle->vertex_buffer_memory, NULL);
+	vkDestroyBuffer(dev->logical_device, cube->index_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->index_buffer_memory, NULL);
+	vkDestroyBuffer(dev->logical_device, cube->vertex_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->vertex_buffer_memory, NULL);
 
 	/* clean texture resources */
 	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
-	vkDestroyImageView(dev->logical_device, triangle->texture_image_view, NULL);
-	vkDestroyImage(dev->logical_device, triangle->texture_image, NULL);
-	vkFreeMemory(dev->logical_device, triangle->texture_image_memory, NULL);
+	vkDestroyImageView(dev->logical_device, cube->texture_image_view, NULL);
+	vkDestroyImage(dev->logical_device, cube->texture_image, NULL);
+	vkFreeMemory(dev->logical_device, cube->texture_image_memory, NULL);
 
 	destroy_render_and_presentation_infra(dev);
 

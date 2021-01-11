@@ -12,11 +12,11 @@ struct MVP {
 };
 
 struct vertex {
-	vec2 pos;
+	vec3 pos;
 	vec2 texCoord;
 };
 
-extern struct vertex triangle_vertices[4];
-extern uint16_t triangle_indices[6];
+extern struct vertex cube_vertices[20];
+extern uint16_t cube_vertex_indices[36];
 
 #endif //GAME_OBJECTS_H
