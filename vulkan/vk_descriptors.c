@@ -28,7 +28,7 @@ get_vertex_attribute_descriptions(uint32_t binding, uint32_t first_location)
 
 	attribute_descriptions[0].binding = binding;
 	attribute_descriptions[0].location = first_location;
-	attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+	attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 	attribute_descriptions[0].offset = offsetof(struct vertex, pos);
 
 	attribute_descriptions[1].binding = binding;
@@ -155,7 +155,7 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 
 		VkDescriptorImageInfo image_info = {
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.imageView = dev->game_objs.dummy_triangle.texture_image_view,
+			.imageView = dev->game_objs.cube.texture_image_view,
 			.sampler = dev->render.texture_sampler
 		};
 

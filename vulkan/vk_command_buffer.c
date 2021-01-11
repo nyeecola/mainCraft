@@ -147,7 +147,7 @@ int
 record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchain,
 				struct vk_render *render, struct vk_game_objects *game_objects)
 {
-	struct vk_vertex_object *obj = &game_objects->dummy_triangle;
+	struct vk_vertex_object *obj = &game_objects->cube;
 	VkCommandBuffer **cmd_buffers = cmd_sub->cmd_buffers;
 	VkBuffer vertex_buffers[] = { obj->vertex_buffer };
 	VkBuffer index_buffer = obj->index_buffer;
