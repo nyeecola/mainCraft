@@ -9,6 +9,6 @@ int
 vk_init_window(struct vk_program *program);
 
 void
-vk_destroy_window(GLFWwindow *window);
+vk_destroy_window(struct window *game_window);
 
 #endif //VK_INIT_H

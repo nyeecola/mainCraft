@@ -11,6 +11,8 @@ framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
 int
 vk_init_window(struct vk_program *program)
 {
+	struct window *game_window = &program->game_window;
+
 	// try to initialize glfw, abort on failure
 	if (!glfwInit())
 		goto return_error;
@@ -41,9 +43,9 @@ return_error:
 }
 
 void
-vk_destroy_window(GLFWwindow *window)
+vk_destroy_window(struct window *game_window)
 {
-	glfwDestroyWindow(window);
+	glfwDestroyWindow(game_window->window);
 	glfwTerminate();
 }
 
