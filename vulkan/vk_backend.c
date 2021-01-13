@@ -43,7 +43,7 @@ run_vk(const int argc, char *const *argv)
 	exit_status = EXIT_SUCCESS;
 
 vk_cleanup:
-	vk_cleanup(program);
+	vk_cleanup(&program);
 destroy_window:
 	vk_destroy_window(program.window);
 exit_program:

@@ -145,6 +145,7 @@ init_vk(struct vk_program *program)
 	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 	struct vk_render *render = &dev->render;
+	VkResult result;
 
 	program->app_info = create_app_info();
 	program->instance = create_instance(&program->app_info);
@@ -153,7 +154,8 @@ init_vk(struct vk_program *program)
 		goto exit_error;
 	}
 
-	if (glfwCreateWindowSurface(program->instance, program->window, NULL, &program->surface) != VK_SUCCESS) {
+	result = glfwCreateWindowSurface(program->instance, program->window, NULL, &game_window->surface);
+	if (result != VK_SUCCESS) {
 		print_error("Failed to create a Window surface!");
 		goto destroy_instance;
 	}
@@ -244,9 +246,9 @@ exit_error:
 }
 
 void
-vk_cleanup(struct vk_program program)
+vk_cleanup(struct vk_program *program)
 {
-	struct vk_device *dev = &program.device;
+	struct vk_device *dev = &program->device;
 	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_render *render = &dev->render;
 
@@ -278,9 +280,9 @@ vk_cleanup(struct vk_program program)
 
 	vkDestroyDevice(dev->logical_device, NULL);
 
-	vkDestroySurfaceKHR(program.instance, program.surface, NULL);
+	vkDestroySurfaceKHR(program->instance, program->surface, NULL);
 
-	vkDestroyInstance(program.instance, NULL);
+	vkDestroyInstance(program->instance, NULL);
 }
 
 int
