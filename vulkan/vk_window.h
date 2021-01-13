@@ -6,7 +6,7 @@
 #include "vk_types.h"
 
 int
-vk_init_window(struct vk_program *program);
+vk_init_window(struct vk_program *program, struct glfw_callback_data *data);
 
 void
 vk_destroy_window(struct window *game_window);

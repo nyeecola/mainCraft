@@ -1,9 +1,11 @@
 #include <GLFW/glfw3.h>
 #include <GL/glx.h>
+#include <stdbool.h>
 
 #include "gl_backend.h"
 #include "constants.h"
 #include "input.h"
+#include "types.h"
 #include "extras.h"
 
 /* constant */
@@ -112,7 +114,7 @@ return_error:
 }
 
 GLFWwindow *
-init_window()
+init_window(struct glfw_callback_data *callback_data)
 {
 	// define window
 	GLFWwindow *window;
@@ -135,6 +137,8 @@ init_window()
 	// define vsync (1 = on, 0 = off)
 	glfwSwapInterval(0);
 
+	glfwSetWindowUserPointer(window, callback_data);
+
 	// set key callback
 	if(!glfwSetKeyCallback(window, key_callback))
 		return window;
@@ -147,7 +151,7 @@ return_null:
 }
 
 void
-destroy_window(GLFWwindow *window)
+gl_destroy_window(GLFWwindow *window)
 {
 	glfwDestroyWindow(window);
 	glfwTerminate();
@@ -157,7 +161,13 @@ int
 run_gl(const int argc, char *const *argv)
 {
 	int exit_status = EXIT_FAILURE;
-	GLFWwindow *window = init_window();
+	bool window_resized = false;
+	struct input input;
+	struct glfw_callback_data callback_data = {
+		.input = &input,
+		.window_resized = &window_resized
+	};
+	GLFWwindow *window = init_window(&callback_data);
 
 	if (!window)
 		goto exit_program;
@@ -168,7 +178,7 @@ run_gl(const int argc, char *const *argv)
 	if (!main_loop(window))
 		exit_status = EXIT_SUCCESS;
 
-	destroy_window(window);
+	gl_destroy_window(window);
 exit_program:
 	return exit_status;
 }

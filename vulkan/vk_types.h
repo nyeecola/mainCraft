@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #include "vk_constants.h"
+#include "types.h"
 
 
 enum family_indices { graphics = 0, transfer, compute, protectedBit, sparseBindingBit, present, queues_count };
@@ -114,6 +115,7 @@ struct vk_device {
 struct window {
 	GLFWwindow *window;
 	VkSurfaceKHR surface;
+	struct input input;
 };
 
 struct vk_program {
