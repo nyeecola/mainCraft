@@ -17,6 +17,6 @@ int
 init_vk(struct vk_program *program);
 
 void
-vk_cleanup(struct vk_program program);
+vk_cleanup(struct vk_program *program);
 
 #endif //VK_RESOURCE_MANAGER_H
