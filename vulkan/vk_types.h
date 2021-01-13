@@ -111,12 +111,16 @@ struct vk_device {
 	struct vk_device_properties device_properties;
 };
 
-struct vk_program {
+struct window {
 	GLFWwindow *window;
 	VkSurfaceKHR surface;
+};
+
+struct vk_program {
 	VkApplicationInfo app_info;
 	VkInstance instance;
 	struct vk_device device;
+	struct window game_window;
 };
 
 #endif //VK_TYPES_H

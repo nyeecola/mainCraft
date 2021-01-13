@@ -8,11 +8,12 @@
 int
 vk_main_loop(struct vk_program *program)
 {
+	GLFWwindow *window = program->game_window.window;
+	struct vk_device *dev = &program->device;
 	uint8_t current_frame = 0;
 	int ret = 0;
-	struct vk_device *dev = &program->device;
 
-	while (!glfwWindowShouldClose(program->window)) {
+	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		if (draw_frame(program, &current_frame)) {
 			ret = -1;
@@ -45,7 +46,7 @@ run_vk(const int argc, char *const *argv)
 vk_cleanup:
 	vk_cleanup(&program);
 destroy_window:
-	vk_destroy_window(program.window);
+	vk_destroy_window(&program.game_window);
 exit_program:
 	return exit_status;
 }

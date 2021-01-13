@@ -19,12 +19,13 @@
 int
 create_render_and_presentation_infra(struct vk_program *program)
 {
+	struct window *game_window = &program->game_window;
 	struct vk_device *dev = &program->device;
 	struct vk_render *render = &dev->render;
 	struct vk_swapchain *swapchain = &dev->swapchain;
 	struct view_projection *camera = &dev->game_objs.camera;
 
-	if (create_swapchain(dev, program->surface, program->window))
+	if (create_swapchain(dev, game_window->surface, game_window->window))
 		goto exit_error;
 
 	if (create_swapchain_image_views(dev->logical_device, swapchain))
@@ -144,6 +145,7 @@ init_vk(struct vk_program *program)
 	struct vk_device *dev = &program->device;
 	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
+	struct window *game_window = &program->game_window;
 	struct vk_render *render = &dev->render;
 	VkResult result;
 
@@ -154,13 +156,13 @@ init_vk(struct vk_program *program)
 		goto exit_error;
 	}
 
-	result = glfwCreateWindowSurface(program->instance, program->window, NULL, &game_window->surface);
+	result = glfwCreateWindowSurface(program->instance, game_window->window, NULL, &game_window->surface);
 	if (result != VK_SUCCESS) {
 		print_error("Failed to create a Window surface!");
 		goto destroy_instance;
 	}
 
-	if (pick_physical_device(program->instance, dev, program->surface))
+	if (pick_physical_device(program->instance, dev, game_window->surface))
 		goto destroy_surface;
 
 	if (create_logical_device(dev))
@@ -238,7 +240,7 @@ destroy_device:
 destroy_surface_support:
 	surface_support_cleanup(&dev->swapchain.support);
 destroy_surface:
-	vkDestroySurfaceKHR(program->instance, program->surface, NULL);
+	vkDestroySurfaceKHR(program->instance, game_window->surface, NULL);
 destroy_instance:
 	vkDestroyInstance(program->instance, NULL);
 exit_error:
@@ -248,6 +250,7 @@ exit_error:
 void
 vk_cleanup(struct vk_program *program)
 {
+	struct window *game_window = &program->game_window;
 	struct vk_device *dev = &program->device;
 	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	struct vk_render *render = &dev->render;
@@ -280,7 +283,7 @@ vk_cleanup(struct vk_program *program)
 
 	vkDestroyDevice(dev->logical_device, NULL);
 
-	vkDestroySurfaceKHR(program->instance, program->surface, NULL);
+	vkDestroySurfaceKHR(program->instance, game_window->surface, NULL);
 
 	vkDestroyInstance(program->instance, NULL);
 }
@@ -288,21 +291,22 @@ vk_cleanup(struct vk_program *program)
 int
 recreate_render_and_presentation_infra(struct vk_program *program)
 {
+	struct window *game_window = &program->game_window;
 	struct vk_device *dev = &program->device;
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 	int width = 0, height = 0;
 
-	glfwGetFramebufferSize(program->window, &width, &height);
+	glfwGetFramebufferSize(game_window->window, &width, &height);
 	// Deal with the "special" case of windows being minimized
 	while (width == 0 || height == 0) {
-		glfwGetFramebufferSize(program->window, &width, &height);
+		glfwGetFramebufferSize(game_window->window, &width, &height);
 		glfwWaitEvents();
 	}
 
 	vkDeviceWaitIdle(dev->logical_device);
 
 	// It is needed because we had a windows resize
-	query_surface_support(dev->physical_device, program->surface, &dev->swapchain.support);
+	query_surface_support(dev->physical_device, game_window->surface, &dev->swapchain.support);
 
 	_destroy_render_and_presentation_infra(dev);
 	if (_create_render_and_presentation_infra(program)) {
