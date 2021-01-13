@@ -31,8 +31,12 @@ run_vk(const int argc, char *const *argv)
 {
 	int exit_status = EXIT_FAILURE;
 	struct vk_program program = { };
+	struct glfw_callback_data callback_data = {
+		.input = &program.game_window.input,
+		.window_resized = &program.device.swapchain.framebuffer_resized
+	};
 
-	if (vk_init_window(&program))
+	if (vk_init_window(&program, &callback_data))
 		goto exit_program;
 
 	if (init_vk(&program))
