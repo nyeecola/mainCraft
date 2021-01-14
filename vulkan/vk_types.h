@@ -19,6 +19,7 @@ struct view_projection {
 	VkDeviceMemory *buffers_memory;
 	uint32_t buffer_memory_count;
 	mat4 proj;
+	mat4 view;
 };
 
 struct vk_vertex_object {
@@ -123,6 +124,7 @@ struct vk_program {
 	VkInstance instance;
 	struct vk_device device;
 	struct window game_window;
+	struct game_data game;
 };
 
 #endif //VK_TYPES_H

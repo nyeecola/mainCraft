@@ -78,26 +78,14 @@ sync_objects_cleanup(VkDevice logical_device, struct vk_draw_sync *sync)
 }
 
 void
-calculate_projection(mat4 projection, VkExtent2D swapchain_extent)
-{
-	glm_perspective(glm_rad(45.0f), swapchain_extent.width / (float) swapchain_extent.height, 0.1f, 10.0f, projection);
-	// This is necessary because this library was writen with the opengl in
-	// mind, but vulkan inverts the y axis ¬¬
-	projection[1][1] *= -1;
-}
-
-void
 update_view_projection(const VkDevice logical_device, struct view_projection *camera, uint32_t current_image)
 {
 	struct MVP mvp = { .model = GLM_MAT4_IDENTITY_INIT };
-	mat4 view;
 	void* data;
 
-	glm_rotate(mvp.model,  glm_rad(25.0f), (vec3) { 0.0f, 0.0f, 1.0f });
-	glm_lookat((vec3) { 2.0f, 2.0f, 2.0f }, (vec3) { 0.0f, 0.0f, 0.0f }, (vec3) { 0.0f, 0.0f, 1.0f }, view);
-
 	// TODO: remove the model calculation and when instance render begin
-	glm_mat4_mulN((mat4 *[]){ &camera->proj, &view }, 2, mvp.view_proj);
+	glm_rotate(mvp.model,  0.0f, (vec3) { 0.0f, 0.0f, 0.0f });
+	glm_mat4_mulN((mat4 *[]){ &camera->proj, &camera->view }, 2, mvp.view_proj);
 
 	vkMapMemory(logical_device, camera->buffers_memory[current_image], 0, sizeof(struct MVP), 0, &data);
 	memcpy(data, &mvp, sizeof(struct MVP));
