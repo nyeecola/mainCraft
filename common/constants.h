@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <math.h>
+
 /* constants */
 #define SKY_COLOR_RED 0.5f
 #define SKY_COLOR_GREEN 0.69f
@@ -8,5 +10,13 @@
 #define SKY_COLOR_ALPHA 1
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 480
+#define PLAYER_MOVEMENT_SPEED 4.317f
+#define INITIAL_HORIZONTAL_ANGLE M_PI
+#define INITIAL_VERTICAL_ANGLE 0.0f
+#define DEFAULT_FOV 55.0f
+#define DEFAULT_MOUSE_SPEED 0.0005f
+#define PLAYER_INITIAL_POSITION_X 0.0f
+#define PLAYER_INITIAL_POSITION_Y 0.0f
+#define PLAYER_INITIAL_POSITION_Z 5.0f
 
 #endif //CONSTANTS_H

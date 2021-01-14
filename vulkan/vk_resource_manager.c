@@ -8,8 +8,10 @@
 #include "vk_swapchain.h"
 #include "game_objects.h"
 #include "vk_instance.h"
+#include "player_view.h"
 #include "vk_backend.h"
 #include "vk_texture.h"
+#include "game_data.h"
 #include "vk_buffer.h"
 #include "vk_render.h"
 #include "vk_image.h"
@@ -23,6 +25,8 @@ create_render_and_presentation_infra(struct vk_program *program)
 	struct vk_device *dev = &program->device;
 	struct vk_render *render = &dev->render;
 	struct vk_swapchain *swapchain = &dev->swapchain;
+	struct swapchain_info *state = &swapchain->state;
+	VkExtent2D *extent = &state->extent;
 	struct view_projection *camera = &dev->game_objs.camera;
 
 	if (create_swapchain(dev, game_window->surface, game_window->window))
@@ -31,11 +35,11 @@ create_render_and_presentation_infra(struct vk_program *program)
 	if (create_swapchain_image_views(dev->logical_device, swapchain))
 		goto destroy_swapchain;
 
-	render->render_pass = create_render_pass(dev->logical_device, swapchain->state);
+	render->render_pass = create_render_pass(dev->logical_device, *state);
 	if (render->render_pass == VK_NULL_HANDLE)
 		goto destroy_image_views;
 
-	if (create_graphics_pipeline(dev->logical_device, &swapchain->state, render))
+	if (create_graphics_pipeline(dev->logical_device, state, render))
 		goto destroy_render_pass;
 
 	if (create_framebuffers(dev->logical_device, swapchain, &dev->render))
@@ -45,7 +49,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 		goto destroy_framebuffers;
 
 	/* Update the projection matrix to handle a possible windows resize */
-	calculate_projection(camera->proj, swapchain->state.extent);
+	update_projection(camera->proj, program->game.configs.FoV, extent->width, extent->height, -1.0f);
 
 	dev->cmd_submission.descriptor_pool = create_descriptor_pool(dev->logical_device, swapchain);
 	if (dev->cmd_submission.descriptor_pool == VK_NULL_HANDLE)
@@ -147,6 +151,7 @@ init_vk(struct vk_program *program)
 	struct vk_cmd_submission *cmd_sub = &dev->cmd_submission;
 	struct window *game_window = &program->game_window;
 	struct vk_render *render = &dev->render;
+	struct game_data *game = &program->game;
 	VkResult result;
 
 	program->app_info = create_app_info();
@@ -188,6 +193,8 @@ init_vk(struct vk_program *program)
 	dev->render.descriptor_set_layout = create_descriptor_set_layout_binding(dev->logical_device);
 	if (dev->render.descriptor_set_layout == VK_NULL_HANDLE)
 		goto destroy_texture_sampler;
+
+	init_game_state(game);
 
 	if (create_render_and_presentation_infra(program))
 		goto destroy_descriptor_set_layout;

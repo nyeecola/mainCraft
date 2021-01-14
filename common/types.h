@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <cglm/cglm.h>
 #include <stdbool.h>
 
 enum key { SPACE = 0, A, W, S, D, key_count };
@@ -15,5 +16,24 @@ struct glfw_callback_data {
 	bool *window_resized;
 	struct input *input;
 };
+
+struct game_configs {
+	float mouse_speed;
+	float FoV;
+};
+
+struct player_info {
+	float horizontal_angle;
+	float vertical_angle;
+	vec3 position;
+	vec3 looking_at;
+};
+
+struct game_data {
+	struct game_configs configs;
+	struct player_info player;
+	double last_frame_time;
+};
+
 
 #endif //TYPES_H
