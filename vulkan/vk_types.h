@@ -31,9 +31,10 @@ struct vk_vertex_object {
 	uint64_t indices_count;
 	VkBuffer index_buffer;
 	VkDeviceMemory index_buffer_memory;
-	VkImage texture_image;
-	VkDeviceMemory texture_image_memory;
-	VkImageView texture_image_view;
+	VkImage *texture_images;
+	VkDeviceMemory *texture_images_memory;
+	VkImageView *texture_images_view;
+	uint32_t texture_count;
 };
 
 struct vk_game_objects {
