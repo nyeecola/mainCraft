@@ -144,7 +144,7 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 
 		VkDescriptorImageInfo image_info = {
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.imageView = dev->game_objs.cube.texture_image_view,
+			.imageView = *dev->game_objs.cube.texture_images_view,
 			.sampler = dev->render.texture_sampler
 		};
 

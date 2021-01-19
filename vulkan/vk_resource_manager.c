@@ -153,6 +153,7 @@ init_vk(struct vk_program *program)
 	struct vk_render *render = &dev->render;
 	struct game_data *game = &program->game;
 	VkResult result;
+	int ret;
 
 	program->app_info = create_app_info();
 	program->instance = create_instance(&program->app_info);
@@ -179,12 +180,13 @@ init_vk(struct vk_program *program)
 	if (create_command_buffers(dev, dev->swapchain.support.capabilities.minImageCount + 1))
 		goto destroy_command_pools;
 
-	if (create_texture_image(dev, "assets/textures/stone_bricks.png", &cube->texture_image, &cube->texture_image_memory))
+	if (load_all_textures(dev))
 		goto destroy_command_pools;
 
-	cube->texture_image_view = create_texture_image_view(dev->logical_device, cube->texture_image);
-	if (cube->texture_image_view == VK_NULL_HANDLE)
-		goto destroy_texture_image;
+	ret = create_texture_image_views(dev->logical_device, cube->texture_images,
+									 &cube->texture_images_view, cube->texture_count);
+	if (ret)
+		goto destroy_texture;
 
 	render->texture_sampler = create_texture_sampler(dev->logical_device, &dev->device_properties.device_properties);
 	if (render->texture_sampler == VK_NULL_HANDLE)
@@ -235,10 +237,9 @@ destroy_descriptor_set_layout:
 destroy_texture_sampler:
 	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
 destroy_texture_image_view:
-	vkDestroyImageView(dev->logical_device, cube->texture_image_view, NULL);
-destroy_texture_image:
-	vkDestroyImage(dev->logical_device, cube->texture_image, NULL);
-	vkFreeMemory(dev->logical_device, cube->texture_image_memory, NULL);
+	destroy_texture_image_views(dev->logical_device, cube->texture_images_view, cube->texture_count);
+destroy_texture:
+	destroy_texture_images(dev, cube->texture_images_memory, cube->texture_images, cube->texture_count);
 destroy_command_pools:
 	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
@@ -273,9 +274,8 @@ vk_cleanup(struct vk_program *program)
 
 	/* clean texture resources */
 	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);
-	vkDestroyImageView(dev->logical_device, cube->texture_image_view, NULL);
-	vkDestroyImage(dev->logical_device, cube->texture_image, NULL);
-	vkFreeMemory(dev->logical_device, cube->texture_image_memory, NULL);
+	destroy_texture_image_views(dev->logical_device, cube->texture_images_view, cube->texture_count);
+	destroy_texture_images(dev, cube->texture_images_memory, cube->texture_images, cube->texture_count);
 
 	destroy_render_and_presentation_infra(dev);
 

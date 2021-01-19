@@ -218,3 +218,53 @@ copy_buffer_to_image(struct vk_cmd_submission *cmd_sub, VkBuffer buffer, VkImage
 
 	return 0;
 }
+
+int
+create_gpu_image(struct vk_device *dev, VkDeviceMemory staging_buffer_memory, VkBuffer staging_buffer,
+				 void *staging_buffer_data, int tex_width, int tex_height,
+				 VkDeviceMemory *texture_image_memory, VkImage *texture_image)
+{
+	VkDeviceMemory local_texture_image_memory;
+	VkImage local_texture_image;
+	int ret;
+
+	ret = create_image(dev, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+					   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+					   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &local_texture_image, &local_texture_image_memory);
+	if (ret)
+		goto return_error;
+
+	/* The following steps do:
+	 * 1) The transition from a "stbi layout"(vkCmdCopyBufferToImage) to a
+	 *    transfer optimized layout.
+	 * 2) Copy the the image with this new layout to the a image buffer.
+	 * 3) Transition to a layout that is readable to the shader.
+	 * The step (1) is necessary because in the step (2) we are using the
+	 * vkCmdCopyBufferToImage function. And the step (3) is necessary
+	 * to shader access the texture.
+	 * */
+	ret = transition_image_layout(&dev->cmd_submission, local_texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+								  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	if (ret)
+		goto destroy_image;
+
+	ret = copy_buffer_to_image(&dev->cmd_submission, staging_buffer, local_texture_image, tex_width, tex_height);
+	if (ret)
+		goto destroy_image;
+
+	ret = transition_image_layout(&dev->cmd_submission, local_texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+								  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	if (ret)
+		goto destroy_image;
+
+	*texture_image_memory = local_texture_image_memory;
+	*texture_image = local_texture_image;
+
+	return 0;
+
+destroy_image:
+	vkDestroyImage(dev->logical_device, local_texture_image, NULL);
+	vkFreeMemory(dev->logical_device, local_texture_image_memory, NULL);
+return_error:
+	return ret;
+}

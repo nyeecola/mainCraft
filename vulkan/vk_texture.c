@@ -1,106 +1,190 @@
 #include <string.h>
+#include <stdio.h>
 
 #include "vk_texture.h"
 #include "vk_buffer.h"
 #include "vk_image.h"
 #include "utils.h"
 
-int
-create_texture_image(struct vk_device *dev, char *image_name,
-					 VkImage *texture_image, VkDeviceMemory *texture_image_memory)
+#define TEX_DIR "assets/textures/"
+
+void
+destroy_texture_images(struct vk_device *dev, VkDeviceMemory *texture_image_memory,
+					   VkImage *texture_image, uint32_t images_count)
 {
-	int tex_width, tex_height, tex_channels, ret = -1;
-	VkDeviceMemory local_texture_image_memory;
-	VkDeviceMemory staging_buffer_memory;
-	VkImage local_texture_image;
+	int i;
+
+	for (i = 0; i < images_count; i++) {
+		vkDestroyImage(dev->logical_device, texture_image[i], NULL);
+		vkFreeMemory(dev->logical_device, texture_image_memory[i], NULL);
+	}
+
+	free(texture_image_memory);
+	free(texture_image);
+}
+
+uint64_t
+calculate_staging_buffer_size(FILE *image_files[], uint32_t images_count)
+{
+	int tex_width[images_count], tex_height[images_count];
+	VkDeviceSize staging_buffer_size = 0;
+	uint64_t current_image_size;
+	int tex_channel, i, ret;
+
+	for (i = 0; i < images_count; i++) {
+		ret = stbi_info_from_file(image_files[i], &tex_width[i], &tex_height[i], &tex_channel);
+		if (!ret)
+			return 0;
+
+		current_image_size = tex_width[i] * tex_height[i] * 4;
+		if (staging_buffer_size < current_image_size)
+			staging_buffer_size = current_image_size;
+	}
+
+	return staging_buffer_size;
+}
+
+int
+create_texture_images(struct vk_device *dev, char *image_names[], uint32_t images_count,
+					 VkImage **texture_image, VkDeviceMemory **texture_image_memory)
+{
+	VkDeviceMemory *local_texture_images_memory, staging_buffer_memory;
+	int tex_width, tex_height, tex_channels, i, ret = -1;
+	VkDeviceSize staging_buffer_size;
+	FILE *image_files[images_count];
+	VkImage *local_texture_images;
 	VkBuffer staging_buffer;
-	VkDeviceSize image_size;
 	VkResult result;
 	stbi_uc* pixels;
 	void* data;
 
-	pixels = stbi_load(image_name, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
-	if (!pixels) {
-		print_error("failed to load texture image!");
-		goto return_error;
+	memset(image_files, 0, sizeof(FILE *) * images_count);
+
+	for (i = 0; i < images_count; i++) {
+		image_files[i] = fopen(image_names[i], "r");
+		if (!image_files[i]) {
+			pprint_error("Failed to open the '%s' texture file!", image_names[i]);
+			goto close_files;
+		}
 	}
 
-	image_size = tex_width * tex_height * 4;
+	staging_buffer_size = calculate_staging_buffer_size(image_files, images_count);
+	if (staging_buffer_size == 0) {
+		print_error("Failed to retrieve image info about texture file!");
+		goto close_files;
+	}
 
-	ret = create_buffer(dev, image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+	ret = create_buffer(dev, staging_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 						VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 	if (ret)
-		goto free_image;
+		goto close_files;
 
-	result = vkMapMemory(dev->logical_device, staging_buffer_memory, 0, image_size, 0, &data);
+	result = vkMapMemory(dev->logical_device, staging_buffer_memory, 0, staging_buffer_size, 0, &data);
 	if (result != VK_SUCCESS) {
 		print_error("Failed to map buffer to system memory!");
 		goto destoy_staging_buffer;
 	}
 
-	memcpy(data, pixels, image_size);
-	vkUnmapMemory(dev->logical_device, staging_buffer_memory);
-
-	ret = create_image(dev, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-					   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &local_texture_image, &local_texture_image_memory);
-	if (ret)
-		goto destoy_staging_buffer;
-
-	/* The following steps do:
-	 * 1) The transition from a "stbi layout"(vkCmdCopyBufferToImage) to a
-	 *    transfer optimized layout.
-	 * 2) Copy the the image with this new layout to the a image buffer.
-	 * 3) Transition to a layout that is readable to the shader.
-	 * The step (1) is necessary because in the step (2) we are using the
-	 * vkCmdCopyBufferToImage function. And the step (3) is necessary
-	 * to shader access the texture.
-	 * */
-	ret = transition_image_layout(&dev->cmd_submission, local_texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-								  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	if (ret) {
-		vkDestroyImage(dev->logical_device, local_texture_image, NULL);
-		vkFreeMemory(dev->logical_device, local_texture_image_memory, NULL);
-		goto destoy_staging_buffer;
+	local_texture_images = malloc(sizeof(VkImage) * images_count);
+	if (!local_texture_images) {
+		print_error("Failed to allocate texture images vector!");
+		goto unmap_staging_buffer;
 	}
 
-	ret = copy_buffer_to_image(&dev->cmd_submission, staging_buffer, local_texture_image, tex_width, tex_height);
-	if (ret) {
-		vkDestroyImage(dev->logical_device, local_texture_image, NULL);
-		vkFreeMemory(dev->logical_device, local_texture_image_memory, NULL);
-		goto destoy_staging_buffer;
+	local_texture_images_memory = malloc(sizeof(VkDeviceMemory) * images_count);
+	if (!local_texture_images_memory) {
+		print_error("Failed to allocate texture images memory vector!");
+		free(local_texture_images);
+		goto unmap_staging_buffer;
 	}
 
-	ret = transition_image_layout(&dev->cmd_submission, local_texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-								VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	if (ret) {
-		vkDestroyImage(dev->logical_device, local_texture_image, NULL);
-		vkFreeMemory(dev->logical_device, local_texture_image_memory, NULL);
-		goto destoy_staging_buffer;
+	for (i = 0; i < images_count; i++) {
+		pixels = stbi_load_from_file(image_files[i], &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+		if (!pixels) {
+			print_error("failed to load texture image!");
+			break;
+		}
+
+		memcpy(data, pixels, tex_width * tex_height * 4);
+
+		stbi_image_free(pixels);
+
+		ret = create_gpu_image(dev, staging_buffer_memory, staging_buffer, data, tex_width, tex_height,
+							   &local_texture_images_memory[i], &local_texture_images[i]);
+		if (ret)
+			break;
 	}
 
-	*texture_image = local_texture_image;
-	*texture_image_memory = local_texture_image_memory;
+	if (i != images_count) {
+		destroy_texture_images(dev, local_texture_images_memory, local_texture_images, i);
+		goto unmap_staging_buffer;
+	}
+
+	*texture_image = local_texture_images;
+	*texture_image_memory = local_texture_images_memory;
 
 	ret = 0;
 
+unmap_staging_buffer:
+	vkUnmapMemory(dev->logical_device, staging_buffer_memory);
 destoy_staging_buffer:
 	vkDestroyBuffer(dev->logical_device, staging_buffer, NULL);
 	vkFreeMemory(dev->logical_device, staging_buffer_memory, NULL);
-free_image:
-	stbi_image_free(pixels);
-return_error:
+close_files:
+	for (i = 0; i < images_count && image_files[i]; i++)
+		fclose(image_files[i]);
+
 	return ret;
 }
 
-/* Create a ImageView to our texture(from createTextureImage).
+void
+destroy_texture_image_views(VkDevice logical_device, VkImageView *texture_images_view, uint32_t images_count)
+{
+	int i;
+
+	for (i = 0; i < images_count; i++)
+		vkDestroyImageView(logical_device, texture_images_view[i], NULL);
+
+	free(texture_images_view);
+}
+
+/* Create a ImageView to our textures(from createTextureImage).
  * As the swapchain imageView we cannot access the content of texture
  * directly, we need a imageView to access it.
  * */
-VkImageView
-create_texture_image_view(VkDevice logical_device, VkImage texture_image)
+int
+create_texture_image_views(VkDevice logical_device, VkImage *texture_image,
+						   VkImageView **texture_images_view, uint32_t images_count)
 {
-	return create_image_view(logical_device, texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageView *local_image_view;
+	int i;
+
+	local_image_view = calloc(images_count, sizeof(VkImageView));
+	if (!local_image_view) {
+		print_error("Failed to alloc textures image views!");
+		goto return_error;
+	}
+
+	for (i = 0; i < images_count; i++) {
+		local_image_view[i] = create_image_view(logical_device, texture_image[i],
+												VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		if (local_image_view[i] == VK_NULL_HANDLE) {
+			print_error("Failed to create texture image view!");
+			break;
+		}
+	}
+
+	if (i != images_count)
+		goto destroy_texture_views;
+
+	*texture_images_view = local_image_view;
+
+	return 0;
+
+destroy_texture_views:
+	destroy_texture_image_views(logical_device, local_image_view, i);
+return_error:
+	return -1;
 }
 
 VkSampler
@@ -137,4 +221,27 @@ create_texture_sampler(VkDevice logical_device, VkPhysicalDeviceProperties *devi
 	return texture_sampler;
 }
 
+int
+load_cube_textures(struct vk_device *dev)
+{
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
+	int ret;
 
+	char *textures_names[] = {
+		TEX_DIR "stone_bricks.png"
+	};
+
+	ret = create_texture_images(dev, textures_names, array_size(textures_names),
+								&cube->texture_images, &cube->texture_images_memory);
+
+	if (!ret)
+		cube->texture_count = array_size(textures_names);
+
+	return ret;
+}
+
+int
+load_all_textures(struct vk_device *dev)
+{
+	return load_cube_textures(dev);
+}
