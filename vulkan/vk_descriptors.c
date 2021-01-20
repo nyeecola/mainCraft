@@ -29,7 +29,7 @@ get_vertex_attribute_descriptions(uint32_t binding, uint32_t first_location,
 }
 
 VkDescriptorSetLayout
-create_descriptor_set_layout_binding(VkDevice logical_device)
+create_descriptor_set_layout_binding(VkDevice logical_device, uint32_t cube_texture_count)
 {
 	VkDescriptorSetLayout descriptor_set_layout;
 	VkResult result;
@@ -44,7 +44,14 @@ create_descriptor_set_layout_binding(VkDevice logical_device)
 		(VkDescriptorSetLayoutBinding) {
 			.binding = 1,
 			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+			.pImmutableSamplers = NULL,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 2,
+			.descriptorCount = cube_texture_count,
+			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 			.pImmutableSamplers = NULL,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		}
@@ -66,7 +73,7 @@ create_descriptor_set_layout_binding(VkDevice logical_device)
 }
 
 VkDescriptorPool
-create_descriptor_pool(VkDevice logical_device, struct vk_swapchain *swapchain)
+create_descriptor_pool(VkDevice logical_device, struct vk_swapchain *swapchain, uint32_t texture_count)
 {
 	VkDescriptorPool descriptor_pool;
 	VkResult result;
@@ -77,8 +84,12 @@ create_descriptor_pool(VkDevice logical_device, struct vk_swapchain *swapchain)
 			.descriptorCount = swapchain->images_count
 		},
 		(VkDescriptorPoolSize) {
-			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.type = VK_DESCRIPTOR_TYPE_SAMPLER,
 			.descriptorCount = swapchain->images_count
+		},
+		(VkDescriptorPoolSize) {
+			.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			.descriptorCount = swapchain->images_count * texture_count
 		}
 	};
 
@@ -106,6 +117,8 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 	uint32_t swapchain_images_size = dev->swapchain.images_count;
 	VkDescriptorSetLayout layouts[swapchain_images_size];
 	struct view_projection *camera = &dev->game_objs.camera;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
+	VkDescriptorImageInfo image_info[cube->texture_count];
 	VkDescriptorSet *descriptor_sets;
 	VkResult result;
 	size_t i;
@@ -135,17 +148,21 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 		goto descriptor_sets_vector;
 	}
 
+	for (i = 0; i < cube->texture_count; i++) {
+		image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		image_info[i].imageView = cube->texture_images_view[i];
+		image_info[i].sampler = VK_NULL_HANDLE;
+	}
+
+	VkDescriptorImageInfo sampler_info = {
+		.sampler = dev->render.texture_sampler
+	};
+
 	for (i = 0; i < swapchain_images_size; i++) {
 		VkDescriptorBufferInfo buffer_info = {
 			.buffer = camera->buffers[i],
 			.offset = 0,
 			.range = sizeof(struct MVP),
-		};
-
-		VkDescriptorImageInfo image_info = {
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.imageView = *dev->game_objs.cube.texture_images_view,
-			.sampler = dev->render.texture_sampler
 		};
 
 		VkWriteDescriptorSet descriptor_writes[] = {
@@ -164,9 +181,18 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 				.dstSet = descriptor_sets[i],
 				.dstBinding = 1,
 				.dstArrayElement = 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
 				.descriptorCount = 1,
-				.pImageInfo = &image_info
+				.pImageInfo = &sampler_info
+			},
+			(VkWriteDescriptorSet) {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptor_sets[i],
+				.dstBinding = 2,
+				.dstArrayElement = 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+				.descriptorCount = array_size(image_info),
+				.pImageInfo = image_info
 			}
 		};
 
