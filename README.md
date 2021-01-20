@@ -10,6 +10,7 @@ A C version of the 'Minecraft in 500 lines of python'.
 > * Vulkan 1.0 or higher
 > * [cglm](https://repology.org/project/cglm/packages)
 > * [stb](https://repology.org/project/stb/packages)
+> * [FastNoise](https://github.com/Auburn/FastNoise) version 1.0.1 commit 456f268 (Already included)
 
 ## Intructions
 
