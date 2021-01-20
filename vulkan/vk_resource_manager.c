@@ -26,6 +26,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 	struct vk_render *render = &dev->render;
 	struct vk_swapchain *swapchain = &dev->swapchain;
 	struct swapchain_info *state = &swapchain->state;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	VkExtent2D *extent = &state->extent;
 	struct view_projection *camera = &dev->game_objs.camera;
 
@@ -51,7 +52,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 	/* Update the projection matrix to handle a possible windows resize */
 	update_projection(camera->proj, program->game.configs.FoV, extent->width, extent->height, -1.0f);
 
-	dev->cmd_submission.descriptor_pool = create_descriptor_pool(dev->logical_device, swapchain);
+	dev->cmd_submission.descriptor_pool = create_descriptor_pool(dev->logical_device, swapchain, cube->texture_count);
 	if (dev->cmd_submission.descriptor_pool == VK_NULL_HANDLE)
 		goto destroy_mvp_buffers;
 
@@ -192,7 +193,7 @@ init_vk(struct vk_program *program)
 	if (render->texture_sampler == VK_NULL_HANDLE)
 		goto destroy_texture_image_view;
 
-	dev->render.descriptor_set_layout = create_descriptor_set_layout_binding(dev->logical_device);
+	dev->render.descriptor_set_layout = create_descriptor_set_layout_binding(dev->logical_device, cube->texture_count);
 	if (dev->render.descriptor_set_layout == VK_NULL_HANDLE)
 		goto destroy_texture_sampler;
 

@@ -228,7 +228,8 @@ load_cube_textures(struct vk_device *dev)
 	int ret;
 
 	char *textures_names[] = {
-		TEX_DIR "stone_bricks.png"
+		TEX_DIR "stone_bricks.png", TEX_DIR "bricks.png", TEX_DIR "grass_block_top.png",
+		TEX_DIR "sand.png",	TEX_DIR "coarse_dirt.png", TEX_DIR "grass_block_side.png"
 	};
 
 	ret = create_texture_images(dev, textures_names, array_size(textures_names),
