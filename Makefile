@@ -6,7 +6,7 @@ SOURCES := $(wildcard $(addsuffix /*.c,$(PROJ_DIRS))) main.c
 
 OBJS := $(SOURCES:%=$(BUILD_DIR)/%.o)
 
-HEADER_DIRS += $(PROJ_DIRS) /usr/include/freetype2/
+HEADER_DIRS += $(PROJ_DIRS) /usr/include/freetype2/ libs
 INCLUDES += $(addprefix -I,$(HEADER_DIRS))
 
 LIB_NAMES ?= ftgl GL glfw vulkan m stb
@@ -31,8 +31,9 @@ $(BUILD_DIR)/%.s.o: %.s
 	$(MKDIR_P) $(dir $@)
 	$(AS) $(ASFLAGS) $(INCLUDES) -c $< -o $@
 
-debug: CFLAGS += -ggdb3 -Og -fstack-protector-all -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
-debug: LDFLAGS += -fsanitize=address -fsanitize=undefined
+debug: CFLAGS += -ggdb3 -Og -fstack-protector-all -fsanitize=address -fsanitize=undefined
+debug: CFLAGS += -fsanitize-recover=all -fno-omit-frame-pointer
+debug: LDFLAGS += -fsanitize=address -fsanitize=undefined -fsanitize-recover=all
 debug: LD_LIBS += -lasan
 debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
