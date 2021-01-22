@@ -43,3 +43,6 @@ tags
 
 # Script to run docker
 dock
+
+# segfault dump
+core

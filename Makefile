@@ -12,7 +12,7 @@ INCLUDES += $(addprefix -I,$(HEADER_DIRS))
 LIB_NAMES ?= ftgl GL glfw vulkan m stb
 LD_LIBS += $(addprefix -l,$(LIB_NAMES))
 
-CFLAGS += -Wall
+CFLAGS += -Wall -Wcast-align -Wunreachable-code
 
 ifeq (${XDG_SESSION_TYPE}, wayland)
 	MACROS += -D GLFW_USE_WAYLAND=ON
@@ -51,6 +51,6 @@ run:
 
 .PHONY: clean
 clean:
-	$(RM) -rf $(BUILD_DIR)
+	@$(RM) -rf $(BUILD_DIR)
 
-MKDIR_P ?= mkdir -p
+MKDIR_P ?= @mkdir -p
