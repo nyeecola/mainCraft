@@ -15,21 +15,9 @@ create_gpu_buffer(struct vk_device *dev, VkDeviceMemory *buffer_memory, VkBuffer
 
 int
 create_buffer(struct vk_device *dev, VkDeviceSize size, VkBufferUsageFlags usage,
-			 VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *buffer_memory);
+			  VkMemoryPropertyFlags properties, VkBuffer *buffer, VkDeviceMemory *buffer_memory);
 
 int
 copy_buffer(struct vk_cmd_submission *cmd_sub, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
-
-int
-create_vertex_buffer(struct vk_device *dev, struct vk_vertex_object *vertex_object);
-
-int
-create_index_buffer(struct vk_device *dev, struct vk_vertex_object *vertex_object);
-
-int
-create_mvp_buffers(struct vk_device *dev, struct view_projection *mvp);
-
-void
-destroy_uniform_buffers(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory *buffers_memory, uint32_t buffer_count);
 
 #endif //VK_BUFFER_H
