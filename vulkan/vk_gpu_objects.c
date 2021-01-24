@@ -25,18 +25,21 @@ create_mvp_buffers(struct vk_device *dev, struct view_projection *mvp)
 {
 	VkDeviceSize buffer_size = sizeof(struct MVP);
 	struct vk_swapchain *swapchain = &dev->swapchain;
+	VkDeviceMemory *local_buffer_memory;
+	VkBuffer *local_buffer;
 	size_t i, ret;
 
-	mvp->buffers = malloc(sizeof(VkBuffer) * swapchain->images_count);
-	if (!mvp->buffers) {
+	local_buffer = malloc(sizeof(VkBuffer) * swapchain->images_count);
+	if (!local_buffer) {
 		print_error("Failed to allocate mvp uniform buffer");
-		goto return_error;
+		return -1;
 	}
 
-	mvp->buffers_memory = malloc(sizeof(VkDeviceMemory) * swapchain->images_count);
-	if (!mvp->buffers_memory) {
+	local_buffer_memory = malloc(sizeof(VkDeviceMemory) * swapchain->images_count);
+	if (!local_buffer_memory) {
 		print_error("Failed to allocate mvp uniform buffer memory");
-		goto free_buffers;
+		free(mvp->buffers);
+		return -1;
 	}
 
 	/* We need create several(equal to the swap chains) because we have
@@ -46,26 +49,24 @@ create_mvp_buffers(struct vk_device *dev, struct view_projection *mvp)
 	for (i = 0; i < swapchain->images_count; i++) {
 		ret = create_buffer(dev, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 							VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-							&mvp->buffers[i], &mvp->buffers_memory[i]);
+							&local_buffer[i], &local_buffer_memory[i]);
 		if (ret)
 			break;
 	}
 
-	if (i == swapchain->images_count) {
-		mvp->buffer_count = swapchain->images_count;
-		return 0;
+	if (i != swapchain->images_count) {
+		destroy_buffer_vector(dev, mvp->buffers, mvp->buffers_memory, i);
+		return -1;
 	}
 
-	destroy_uniform_buffers(dev, mvp->buffers, mvp->buffers_memory, i);
-	free(mvp->buffers_memory);
-free_buffers:
-	free(mvp->buffers);
-return_error:
-	return -1;
+	mvp->buffers = local_buffer;
+	mvp->buffers_memory = local_buffer_memory;
+	mvp->buffer_count = swapchain->images_count;
+	return 0;
 }
 
 void
-destroy_uniform_buffers(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory *buffers_memory, uint32_t buffer_count)
+destroy_buffer_vector(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory *buffers_memory, uint32_t buffer_count)
 {
 	int i;
 
@@ -73,4 +74,7 @@ destroy_uniform_buffers(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory
 		vkDestroyBuffer(dev->logical_device, buffers[i], NULL);
 		vkFreeMemory(dev->logical_device, buffers_memory[i], NULL);
 	}
+
+	free(buffers);
+	free(buffers_memory);
 }

@@ -65,7 +65,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 destroy_descriptor_pool:
 	vkDestroyDescriptorPool(dev->logical_device, dev->cmd_submission.descriptor_pool, NULL);
 destroy_mvp_buffers:
-	destroy_uniform_buffers(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
+	destroy_buffer_vector(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
 destroy_framebuffers:
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
 destroy_graphics_pipeline:
@@ -89,11 +89,9 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	struct view_projection *camera = &dev->game_objs.camera;
 
 	/* Descriptor sets are destroyed *here* */
-	destroy_uniform_buffers(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
+	destroy_buffer_vector(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
 	vkDestroyDescriptorPool(dev->logical_device, dev->cmd_submission.descriptor_pool, NULL);
 	free(dev->cmd_submission.descriptor_sets);
-	free(camera->buffers_memory);
-	free(camera->buffers);
 
 	/* Cleanup pipeline resources */
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);

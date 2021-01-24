@@ -14,6 +14,6 @@ int
 create_mvp_buffers(struct vk_device *dev, struct view_projection *mvp);
 
 void
-destroy_uniform_buffers(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory *buffers_memory, uint32_t buffer_count);
+destroy_buffer_vector(struct vk_device *dev, VkBuffer *buffers, VkDeviceMemory *buffers_memory, uint32_t buffer_count);
 
 #endif //VK_GPU_OBJECTS_H
