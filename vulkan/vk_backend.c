@@ -15,6 +15,7 @@ vk_main_loop(struct vk_program *program)
 	struct view_projection *camera = &dev->game_objs.camera;
 	struct game_data *game = &program->game;
 	uint8_t current_frame = 0;
+	uint32_t imageIndex;
 	int ret = 0;
 
 	while (!glfwWindowShouldClose(window)) {
@@ -22,10 +23,19 @@ vk_main_loop(struct vk_program *program)
 
 		update_position_and_view(window, &program->game_window.input, game, camera->view, -1.0f);
 
-		if (draw_frame(program, &current_frame)) {
-			ret = -1;
+		ret = acquire_swapchain_image(program, current_frame, &imageIndex);
+		if (ret == VK_ERROR_OUT_OF_DATE_KHR)
+			continue;
+		if (ret == -1)
 			break;
-		}
+
+		update_view_projection(dev->logical_device, camera, imageIndex);
+
+		ret = draw_frame(program, current_frame, imageIndex);
+		if (ret)
+			break;
+
+		current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
 
 	vkDeviceWaitIdle(dev->logical_device);

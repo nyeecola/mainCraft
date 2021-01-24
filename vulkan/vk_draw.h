@@ -11,7 +11,13 @@ create_sync_objects(VkDevice logical_device, struct vk_draw_sync *sync, uint32_t
 void
 sync_objects_cleanup(VkDevice logical_device, struct vk_draw_sync *sync);
 
+void
+update_view_projection(const VkDevice logical_device, struct view_projection *camera, uint32_t current_image);
+
 int
-draw_frame(struct vk_program *program, uint8_t *current_frame);
+acquire_swapchain_image(struct vk_program *program, uint8_t current_frame, uint32_t *imageIndex);
+
+int
+draw_frame(struct vk_program *program, uint8_t current_frame, uint32_t imageIndex);
 
 #endif //VK_DRAW_H

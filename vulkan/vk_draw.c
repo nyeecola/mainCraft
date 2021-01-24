@@ -93,47 +93,66 @@ update_view_projection(const VkDevice logical_device, struct view_projection *ca
 }
 
 int
-draw_frame(struct vk_program *program, uint8_t *current_frame)
+acquire_swapchain_image(struct vk_program *program, uint8_t current_frame, uint32_t *imageIndex)
 {
 	struct vk_device *dev = &program->device;
 	const VkDevice logical_device = dev->logical_device;
 	const struct vk_draw_sync *sync = &dev->draw_sync;
-	VkSemaphore image_available_semaphore = sync->image_available_semaphore[*current_frame];
-	VkSemaphore render_finished_semaphore = sync->render_finished_semaphore[*current_frame];
-	VkFence in_flight_fences = sync->in_flight_fences[*current_frame];
-	struct view_projection *camera = &dev->game_objs.camera;
+	VkSemaphore image_available_semaphore = sync->image_available_semaphore[current_frame];
+	VkFence in_flight_fences = sync->in_flight_fences[current_frame];
+	VkResult result;
+	int ret;
+
+	vkWaitForFences(logical_device, 1, &in_flight_fences, VK_TRUE, UINT64_MAX);
+
+	result = vkAcquireNextImageKHR(logical_device, dev->swapchain.handle, UINT64_MAX,
+								   image_available_semaphore, VK_NULL_HANDLE, imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		ret = recreate_render_and_presentation_infra(program);
+		if (ret == 0)
+			return VK_ERROR_OUT_OF_DATE_KHR;
+		return -1;
+	}else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		print_error("failed to acquire swap chain image!");
+		return -1;
+	}
+
+	if (sync->images_in_flight[*imageIndex] != VK_NULL_HANDLE)
+		vkWaitForFences(logical_device, 1, &sync->images_in_flight[*imageIndex], VK_TRUE, UINT64_MAX);
+
+	sync->images_in_flight[*imageIndex] = in_flight_fences;
+
+	result = vkResetFences(logical_device, 1, &in_flight_fences);
+	if (result != VK_SUCCESS) {
+		print_error("Failed to reset fences!");
+		return -1;
+	}
+
+	return 0;
+}
+
+int
+draw_frame(struct vk_program *program, uint8_t current_frame, uint32_t imageIndex)
+{
+	struct vk_device *dev = &program->device;
+	const struct vk_draw_sync *sync = &dev->draw_sync;
+	VkSemaphore image_available_semaphore = sync->image_available_semaphore[current_frame];
+	VkSemaphore render_finished_semaphore = sync->render_finished_semaphore[current_frame];
+	VkFence in_flight_fences = sync->in_flight_fences[current_frame];
 	const VkQueue *queues = dev->cmd_submission.queue_handles;
 	bool *framebuffer_resized = &dev->swapchain.framebuffer_resized;
 	VkCommandBuffer **cmd_buffers = dev->cmd_submission.cmd_buffers;
-	uint32_t imageIndex;
 	VkResult result;
 
 	/* The swapchain that will be used in present_info */
 	VkSwapchainKHR swapchains[] = { dev->swapchain.handle };
 	/* All bellow used in submit_info to submit the graphics command buffer */
-	VkSemaphore waitSemaphores[] = { image_available_semaphore } ;
+	VkSemaphore waitSemaphores[] = { image_available_semaphore };
 	/* Specifies to which semaphore a signal will be emited to after the rendering*/
 	VkSemaphore signalSemaphores[] = { render_finished_semaphore };
 	/* Which stages of the pipeline the submit will wait */
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-	vkWaitForFences(logical_device, 1, &in_flight_fences, VK_TRUE, UINT64_MAX);
-
-	result = vkAcquireNextImageKHR(logical_device, dev->swapchain.handle, UINT64_MAX,
-						  image_available_semaphore, VK_NULL_HANDLE, &imageIndex);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-		return recreate_render_and_presentation_infra(program);
-	} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-		print_error("failed to acquire swap chain image!");
-		return -1;
-	}
-
-	if (sync->images_in_flight[imageIndex] != VK_NULL_HANDLE) {
-		vkWaitForFences(logical_device, 1, &sync->images_in_flight[imageIndex], VK_TRUE, UINT64_MAX);
-	}
-
-	sync->images_in_flight[imageIndex] = in_flight_fences;
 
 	VkSubmitInfo submitInfo = {
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -145,14 +164,6 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 		.signalSemaphoreCount = array_size(signalSemaphores),
 		.pSignalSemaphores = signalSemaphores
 	};
-
-	result = vkResetFences(logical_device, 1, &in_flight_fences);
-	if (result != VK_SUCCESS) {
-		print_error("Failed to reset fences!");
-		return -1;
-	}
-
-	update_view_projection(logical_device, camera, imageIndex);
 
 	result = vkQueueSubmit(queues[graphics], 1, &submitInfo, in_flight_fences);
 	if (result != VK_SUCCESS) {
@@ -176,11 +187,9 @@ draw_frame(struct vk_program *program, uint8_t *current_frame)
 		if (recreate_render_and_presentation_infra(program))
 			return -1;
 	} else if (result != VK_SUCCESS) {
-		print_error("Failed to acquire swap chain image!");
+		print_error("Failed to present frame!");
 		return -1;
 	}
-
-	*current_frame = (*current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 
 	return 0;
 }
