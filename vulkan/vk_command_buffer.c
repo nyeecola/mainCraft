@@ -156,22 +156,23 @@ record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchai
 	VkResult result;
 	int i;
 
-	for (i = 0; i < swapchain->images_count; i++) {
-		VkCommandBufferBeginInfo begin_info = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = 0,
-		};
+	VkClearValue clear_values[] = {
+		/* workarround: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80454 */
+		{ .color = { { SKY_COLOR_RED, SKY_COLOR_GREEN , SKY_COLOR_BLUE , SKY_COLOR_ALPHA } } },
+		{ .depthStencil = { .depth = 1.0f, .stencil = 0.0f } }
+	};
 
+	VkCommandBufferBeginInfo begin_info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = 0,
+	};
+
+	for (i = 0; i < swapchain->images_count; i++) {
 		result = vkBeginCommandBuffer(cmd_buffers[graphics][i], &begin_info);
 		if (result != VK_SUCCESS) {
 			print_error("Failed to begin recording command buffer!");
 			return -1;
 		}
-
-		VkClearValue clear_values = {
-			/* workarround: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80454 */
-			.color = { { SKY_COLOR_RED, SKY_COLOR_GREEN , SKY_COLOR_BLUE , SKY_COLOR_ALPHA } }
-		};
 
 		VkRenderPassBeginInfo render_pass_info = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -179,8 +180,8 @@ record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchai
 			.framebuffer = render->swapChain_framebuffers[i],
 			.renderArea.offset = { 0, 0 },
 			.renderArea.extent = swapchain->state.extent,
-			.clearValueCount = 1,
-			.pClearValues = &clear_values
+			.clearValueCount = array_size(clear_values),
+			.pClearValues = clear_values
 		};
 
 		vkCmdBeginRenderPass(cmd_buffers[graphics][i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);

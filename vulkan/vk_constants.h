@@ -14,5 +14,6 @@
 
 extern const char *validation_layers[1];
 extern const char *device_extensions[1];
+extern const VkFormat depth_buffer_formats[3];
 
 #endif //VK_CONSTANTS_H

@@ -77,6 +77,10 @@ struct vk_render {
 	uint32_t framebuffer_count;
 	VkDescriptorSetLayout descriptor_set_layout;
 	VkSampler texture_sampler;
+	VkImage depth_image;
+	VkDeviceMemory depth_image_memory;
+	VkImageView depth_image_view;
+	VkFormat depth_format;
 };
 
 struct surface_support {

@@ -36,15 +36,18 @@ create_render_and_presentation_infra(struct vk_program *program)
 	if (create_swapchain_image_views(dev->logical_device, swapchain))
 		goto destroy_swapchain;
 
-	render->render_pass = create_render_pass(dev->logical_device, *state);
+	render->render_pass = create_render_pass(dev->logical_device, render->depth_format, *state);
 	if (render->render_pass == VK_NULL_HANDLE)
 		goto destroy_image_views;
 
 	if (create_graphics_pipeline(dev->logical_device, state, render))
 		goto destroy_render_pass;
 
-	if (create_framebuffers(dev->logical_device, swapchain, &dev->render))
+	if (create_depth_resources(dev, render, *extent))
 		goto destroy_graphics_pipeline;
+
+	if (create_framebuffers(dev->logical_device, swapchain, &dev->render))
+		goto destroy_depth_resources;
 
 	if (create_mvp_buffers(dev, camera))
 		goto destroy_framebuffers;
@@ -68,6 +71,10 @@ destroy_mvp_buffers:
 	destroy_buffer_vector(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
 destroy_framebuffers:
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
+destroy_depth_resources:
+	vkDestroyImage(dev->logical_device, render->depth_image, NULL);
+	vkFreeMemory(dev->logical_device, render->depth_image_memory, NULL);
+	vkDestroyImageView(dev->logical_device, render->depth_image_view, NULL);
 destroy_graphics_pipeline:
 	vkDestroyPipeline(dev->logical_device, render->graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
@@ -98,6 +105,10 @@ destroy_render_and_presentation_infra(struct vk_device *dev)
 	vkDestroyPipeline(dev->logical_device, dev->render.graphics_pipeline, NULL);
 	vkDestroyPipelineLayout(dev->logical_device, render->pipeline_layout, NULL);
 	vkDestroyRenderPass(dev->logical_device, dev->render.render_pass, NULL);
+	/* Destroy depth resources */
+	vkDestroyImage(dev->logical_device, render->depth_image, NULL);
+	vkFreeMemory(dev->logical_device, render->depth_image_memory, NULL);
+	vkDestroyImageView(dev->logical_device, render->depth_image_view, NULL);
 
 	/* Cleanup swapchain resources*/
 	image_views_cleanup(dev->logical_device, swapchain->image_views, swapchain->images_count);
