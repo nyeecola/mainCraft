@@ -180,6 +180,33 @@ surface_support_cleanup(struct surface_support *surface_support)
 	surface_support->present_modes = NULL;
 }
 
+VkFormat
+find_supported_format(VkPhysicalDevice physical_device, const VkFormat candidates[],
+					  uint32_t condidates_count, VkImageTiling tiling, VkFormatFeatureFlags features)
+{
+	int i;
+
+	for (i = 0; i < condidates_count; i++) {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physical_device, candidates[i], &props);
+
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+			return candidates[i];
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+			return candidates[i];
+	}
+
+	return VK_FORMAT_UNDEFINED;
+}
+
+VkFormat
+find_depth_format(VkPhysicalDevice physical_device)
+{
+	/* depth_buffer_formats is in vk_constants.c */
+	return find_supported_format(physical_device, depth_buffer_formats, array_size(depth_buffer_formats),
+								 VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
 bool
 is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_device, VkSurfaceKHR surface)
 {
@@ -188,6 +215,7 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 	struct vk_cmd_submission cmd_sub = { };
 	struct surface_support surface_support = { };
 	bool extensions_supported;
+	VkFormat depth_format;
 
 	extensions_supported = check_device_extension_support(physical_device);
 	if (!extensions_supported)
@@ -205,6 +233,10 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 	if (!cmd_sub.queue_count[graphics] || !cmd_sub.queue_count[present])
 		goto surface_support_cleanup;
 
+	depth_format = find_depth_format(physical_device);
+	if (depth_format == VK_FORMAT_UNDEFINED)
+		goto surface_support_cleanup;
+
 	vkGetPhysicalDeviceFeatures(physical_device, &supported_features);
 	if(!supported_features.samplerAnisotropy)
 		goto surface_support_cleanup;
@@ -214,6 +246,7 @@ is_device_suitable(VkPhysicalDevice physical_device, struct vk_device *picked_de
 	picked_device->cmd_submission = cmd_sub;
 	picked_device->swapchain.support = surface_support;
 	picked_device->device_properties.supported_features = supported_features;
+	picked_device->render.depth_format = depth_format;
 
 	return true;
 

@@ -8,3 +8,10 @@ const char *validation_layers[1] = {
 const char *device_extensions[1] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
+
+const VkFormat depth_buffer_formats[3] = {
+	VK_FORMAT_D32_SFLOAT,
+	VK_FORMAT_D32_SFLOAT_S8_UINT,
+	VK_FORMAT_D24_UNORM_S8_UINT
+};
+

@@ -2,10 +2,11 @@
 
 #include "vk_descriptors.h"
 #include "vk_render.h"
+#include "vk_image.h"
 #include "utils.h"
 
 VkRenderPass
-create_render_pass(VkDevice logical_device, struct swapchain_info state)
+create_render_pass(VkDevice logical_device, VkFormat depth_format, struct swapchain_info state)
 {
 	VkRenderPass render_pass;
 	VkResult result;
@@ -21,16 +22,32 @@ create_render_pass(VkDevice logical_device, struct swapchain_info state)
 		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 	};
 
+	VkAttachmentDescription depth_attachment = {
+		.format = depth_format,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	};
+
 	VkAttachmentReference color_attachment_ref = {
 		.attachment = 0,
 		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+	};
+
+	VkAttachmentReference depth_attachment_ref = {
+		.attachment = 1,
+		.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 	};
 
 	VkSubpassDescription subpass = {
 		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 		.colorAttachmentCount = 1,
 		.pColorAttachments = &color_attachment_ref,
-		.pDepthStencilAttachment = VK_NULL_HANDLE
+		.pDepthStencilAttachment = &depth_attachment_ref
 	};
 
 	/* This subpass needs wait for the clear-color operation and the operation
@@ -39,18 +56,18 @@ create_render_pass(VkDevice logical_device, struct swapchain_info state)
 	VkSubpassDependency dependency = {
 		.srcSubpass = VK_SUBPASS_EXTERNAL,
 		.dstSubpass = 0,
-		.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 		.srcAccessMask = 0,
-		.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 	};
 
-	/* Currently we only have one of each ^^;
+	/* Currently we only have one of each ^^; (except the attachment)
 	 * But we may have more in the future...
 	 * */
 	VkSubpassDescription subpasses[] = { subpass };
 	VkSubpassDependency subpasses_dependencies[] = { dependency };
-	VkAttachmentDescription attachments[] = { color_attachment };
+	VkAttachmentDescription attachments[] = { color_attachment, depth_attachment };
 
 	VkRenderPassCreateInfo render_pass_info = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -243,6 +260,15 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 		goto destroy_frag_module;
 	}
 
+	VkPipelineDepthStencilStateCreateInfo depth_stencil = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		.depthTestEnable = VK_TRUE,
+		.depthWriteEnable = VK_TRUE,
+		.depthCompareOp = VK_COMPARE_OP_LESS,
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE,
+	};
+
 	VkGraphicsPipelineCreateInfo pipeline_info = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.stageCount = array_size(shader_stages),
@@ -252,6 +278,7 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 		.pViewportState = &viewport_state,
 		.pRasterizationState = &rasterizer,
 		.pMultisampleState = &multisampling,
+		.pDepthStencilState = &depth_stencil,
 		.pColorBlendState = &color_blending,
 		.pDynamicState = NULL, // Optional
 		.renderPass = render->render_pass,
@@ -297,7 +324,7 @@ create_framebuffers(const VkDevice logical_device, struct vk_swapchain *swapchai
 	}
 
 	for (i = 0; i < swapchain->images_count; i++) {
-		VkImageView attachments[] = { swapchain->image_views[i] };
+		VkImageView attachments[] = { swapchain->image_views[i], render->depth_image_view };
 
 		VkFramebufferCreateInfo framebuffer_info = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -337,3 +364,39 @@ framebuffers_cleanup(const VkDevice logical_device, VkFramebuffer *framebuffers,
 
 	free(framebuffers);
 }
+
+int
+create_depth_resources(struct vk_device *dev, struct vk_render *render, VkExtent2D swapchain_extent)
+{
+	VkDeviceMemory depth_image_memory;
+	VkImageView depth_image_view;
+	VkImage depth_image;
+	int ret = -1;
+
+	ret = create_image(dev, swapchain_extent.width, swapchain_extent.height, render->depth_format,
+					   VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+					   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &depth_image, &depth_image_memory);
+	if (ret) {
+		print_error("Failed to create depth buffer image!");
+		goto return_error;
+	}
+
+	depth_image_view = create_image_view(dev->logical_device, depth_image, render->depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
+	if (depth_image_view == VK_NULL_HANDLE) {
+		print_error("Failed to create depth buffer image view!");
+		goto destroy_depth_image;
+	}
+
+	render->depth_image = depth_image;
+	render->depth_image_view = depth_image_view;
+	render->depth_image_memory = depth_image_memory;
+
+	return 0;
+
+destroy_depth_image:
+	vkDestroyImage(dev->logical_device, depth_image, NULL);
+	vkFreeMemory(dev->logical_device, depth_image_memory, NULL);
+return_error:
+	return ret;
+}
+
