@@ -64,6 +64,7 @@ run_vk(const int argc, char *const *argv)
 
 	exit_status = EXIT_SUCCESS;
 
+	destroy_render_and_presentation_infra(&program.device);
 vk_cleanup:
 	vk_cleanup(&program);
 destroy_window:
