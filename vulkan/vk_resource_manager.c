@@ -287,8 +287,6 @@ vk_cleanup(struct vk_program *program)
 	destroy_texture_image_views(dev->logical_device, cube->texture_images_view, cube->texture_count);
 	destroy_texture_images(dev, cube->texture_images_memory, cube->texture_images, cube->texture_count);
 
-	destroy_render_and_presentation_infra(dev);
-
 	/* Free command submission resources */
 	cleanup_command_pools(dev->logical_device, dev->cmd_submission.command_pools);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
