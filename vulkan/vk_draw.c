@@ -80,15 +80,13 @@ sync_objects_cleanup(VkDevice logical_device, struct vk_draw_sync *sync)
 void
 update_view_projection(const VkDevice logical_device, struct view_projection *camera, uint32_t current_image)
 {
-	struct MVP mvp = { .model = GLM_MAT4_IDENTITY_INIT };
+	mat4 view_proj;
 	void* data;
 
-	// TODO: remove the model calculation and when instance render begin
-	glm_rotate(mvp.model,  0.0f, (vec3) { 0.0f, 0.0f, 0.0f });
-	glm_mat4_mulN((mat4 *[]){ &camera->proj, &camera->view }, 2, mvp.view_proj);
+	glm_mat4_mulN((mat4 *[]){ &camera->proj, &camera->view }, 2, view_proj);
 
-	vkMapMemory(logical_device, camera->buffers_memory[current_image], 0, sizeof(struct MVP), 0, &data);
-	memcpy(data, &mvp, sizeof(struct MVP));
+	vkMapMemory(logical_device, camera->buffers_memory[current_image], 0, sizeof(mat4), 0, &data);
+	memcpy(data, &view_proj, sizeof(mat4));
 	vkUnmapMemory(logical_device, camera->buffers_memory[current_image]);
 }
 
@@ -177,7 +175,7 @@ draw_frame(struct vk_program *program, uint8_t current_frame, uint32_t imageInde
 		.pWaitSemaphores = signalSemaphores,
 		.swapchainCount = array_size(swapchains),
 		.pSwapchains = swapchains,
-		.pImageIndices = &imageIndex,
+		.pImageIndices = &imageIndex
 	};
 
 	result = vkQueuePresentKHR(queues[present], &presentInfo);

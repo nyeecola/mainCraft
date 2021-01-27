@@ -6,11 +6,6 @@
 
 #include "vk_types.h"
 
-struct MVP {
-	alignas(16) mat4 model;
-	alignas(16) mat4 view_proj;
-};
-
 struct vertex {
 	vec3 pos;
 	vec2 texCoord;

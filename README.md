@@ -1,6 +1,10 @@
 # mainCraft
 A C version of the 'Minecraft in 500 lines of python'.
 
+## Current state
+
+![plot](./assets/screenshots/maincraft-01-26-2021.png)
+
 ## Requirements
 
 > * C11 compatible compiler([Clang](https://releases.llvm.org/download.html) / [GCC](https://repology.org/project/gcc/packages))

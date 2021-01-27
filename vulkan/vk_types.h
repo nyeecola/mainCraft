@@ -23,18 +23,28 @@ struct view_projection {
 };
 
 struct vk_vertex_object {
+	/* Vertex resources */
 	VkBuffer vertex_buffer;
 	VkDeviceMemory vertex_buffer_memory;
 	struct vertex *vertices;
 	uint64_t vertices_count;
+	/* Index resources */
 	uint16_t *indices;
 	uint64_t indices_count;
 	VkBuffer index_buffer;
 	VkDeviceMemory index_buffer_memory;
+	/* Textures resources */
 	VkImage *texture_images;
 	VkDeviceMemory *texture_images_memory;
 	VkImageView *texture_images_view;
 	uint32_t texture_count;
+	/* Model positions */
+	VkBuffer *position_buffer;
+	VkDeviceMemory *position_buffer_memory;
+	VkBuffer staging_position_buffer;
+	VkDeviceMemory staging_position_buffer_memory;
+	uint32_t position_count;
+	uint32_t position_buffer_count;
 };
 
 struct vk_game_objects {

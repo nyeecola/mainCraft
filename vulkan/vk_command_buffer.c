@@ -74,6 +74,8 @@ free_command_buffer_vector(VkCommandBuffer *cmd_buffers[])
 	for (i = 0; i < queues_count; i++)
 		if (!cmd_buffers[i])
 			free(cmd_buffers[i]);
+
+	cmd_buffers = NULL;
 }
 
 int
@@ -190,12 +192,14 @@ record_draw_cmd(struct vk_cmd_submission *cmd_sub, struct vk_swapchain *swapchai
 
 		vkCmdBindVertexBuffers(cmd_buffers[graphics][i], 0, array_size(vertex_buffers), vertex_buffers, offsets);
 
+		vkCmdBindVertexBuffers(cmd_buffers[graphics][i], 1, 1, &obj->position_buffer[i], offsets);
+
 		vkCmdBindIndexBuffer(cmd_buffers[graphics][i], index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
 		vkCmdBindDescriptorSets(cmd_buffers[graphics][i], VK_PIPELINE_BIND_POINT_GRAPHICS,
 								render->pipeline_layout, 0, 1, &cmd_sub->descriptor_sets[i], 0, NULL);
 
-		vkCmdDrawIndexed(cmd_buffers[graphics][i], index_count, 1, 0, 0, 0);
+		vkCmdDrawIndexed(cmd_buffers[graphics][i], index_count, obj->position_count, 0, 0, 0);
 
 		vkCmdEndRenderPass(cmd_buffers[graphics][i]);
 

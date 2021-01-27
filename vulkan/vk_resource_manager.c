@@ -8,13 +8,16 @@
 #include "vk_gpu_objects.h"
 #include "vk_swapchain.h"
 #include "game_objects.h"
+#include "vk_constants.h"
 #include "vk_instance.h"
 #include "player_view.h"
 #include "vk_backend.h"
 #include "vk_texture.h"
 #include "game_data.h"
 #include "vk_render.h"
+#include "vk_buffer.h"
 #include "vk_image.h"
+#include "terrain.h"
 #include "vk_draw.h"
 #include "utils.h"
 
@@ -49,7 +52,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 	if (create_framebuffers(dev->logical_device, swapchain, &dev->render))
 		goto destroy_depth_resources;
 
-	if (create_mvp_buffers(dev, camera))
+	if (create_vp_ubo_buffers(dev, camera))
 		goto destroy_framebuffers;
 
 	/* Update the projection matrix to handle a possible windows resize */
@@ -57,7 +60,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 
 	dev->cmd_submission.descriptor_pool = create_descriptor_pool(dev->logical_device, swapchain, cube->texture_count);
 	if (dev->cmd_submission.descriptor_pool == VK_NULL_HANDLE)
-		goto destroy_mvp_buffers;
+		goto destroy_vp_buffers;
 
 	if (create_descriptor_sets(dev, &dev->cmd_submission, render->descriptor_set_layout))
 		goto destroy_descriptor_pool;
@@ -67,7 +70,7 @@ create_render_and_presentation_infra(struct vk_program *program)
 	/* Descriptor sets are destroyed *here* */
 destroy_descriptor_pool:
 	vkDestroyDescriptorPool(dev->logical_device, dev->cmd_submission.descriptor_pool, NULL);
-destroy_mvp_buffers:
+destroy_vp_buffers:
 	destroy_buffer_vector(dev, camera->buffers, camera->buffers_memory, camera->buffer_count);
 destroy_framebuffers:
 	framebuffers_cleanup(dev->logical_device, render->swapChain_framebuffers, render->framebuffer_count);
@@ -119,9 +122,12 @@ int
 _create_render_and_presentation_infra(struct vk_program *program)
 {
 	struct vk_device *dev = &program->device;
+	uint32_t *cmd_buffers_count = dev->cmd_submission.cmd_buffers_count;
 	VkCommandBuffer **cmd_buffer = dev->cmd_submission.cmd_buffers;
 	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
 	uint32_t buffer_count = dev->swapchain.images_count;
+	int i, ret;
 
 	if (create_render_and_presentation_infra(program))
 		goto return_error;
@@ -131,8 +137,28 @@ _create_render_and_presentation_infra(struct vk_program *program)
 	if (!cmd_buffer[graphics])
 		goto destroy_render_and_presentation_infra;
 
+	dev->cmd_submission.cmd_buffers_count[graphics] = buffer_count;
+
+	if (create_cubes_position_buffers(dev, cube, dev->swapchain.images_count))
+		goto free_graphics_command_buffers;
+
+	vkQueueWaitIdle(dev->cmd_submission.queue_handles[graphics]);
+	for (i = 0; i < dev->swapchain.images_count; i++) {
+		ret = copy_buffer(&dev->cmd_submission, cube->staging_position_buffer,
+						  cube->position_buffer[i], cube->position_count * sizeof(vec3));
+		if (ret) {
+			pprint_error("Failed to copy position data to %d/%d gpu poistion buffer", i+1, dev->swapchain.images_count);
+			goto destroy_position_buffers;
+		}
+	}
+
 	return 0;
 
+destroy_position_buffers:
+	destroy_buffer_vector(dev, cube->position_buffer, cube->position_buffer_memory, dev->swapchain.images_count);
+free_graphics_command_buffers:
+	vkFreeCommandBuffers(dev->logical_device, cmd_pool[graphics], cmd_buffers_count[graphics], cmd_buffer[graphics]);
+	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
 destroy_render_and_presentation_infra:
 	destroy_render_and_presentation_infra(dev);
 return_error:
@@ -145,12 +171,16 @@ _destroy_render_and_presentation_infra(struct vk_device *dev)
 	uint32_t *cmd_buffers_count = dev->cmd_submission.cmd_buffers_count;
 	VkCommandBuffer **cmd_buffer = dev->cmd_submission.cmd_buffers;
 	VkCommandPool *cmd_pool = dev->cmd_submission.command_pools;
+	struct vk_vertex_object *cube = &dev->game_objs.cube;
 
 	destroy_render_and_presentation_infra(dev);
+
+	destroy_buffer_vector(dev, cube->position_buffer, cube->position_buffer_memory, cube->position_buffer_count);
 
 	/* Free grahics command buffers */
 	vkFreeCommandBuffers(dev->logical_device, cmd_pool[graphics], cmd_buffers_count[graphics], cmd_buffer[graphics]);
 	free_command_buffer_vector(dev->cmd_submission.cmd_buffers);
+	cmd_buffers_count[graphics] = 0;
 }
 
 int
@@ -163,7 +193,7 @@ init_vk(struct vk_program *program)
 	struct vk_render *render = &dev->render;
 	struct game_data *game = &program->game;
 	VkResult result;
-	int ret;
+	int ret, i;
 
 	program->app_info = create_app_info();
 	program->instance = create_instance(&program->app_info);
@@ -208,8 +238,31 @@ init_vk(struct vk_program *program)
 
 	init_game_state(game);
 
-	if (create_render_and_presentation_infra(program))
+	init_noise_generator(&game->terrain.noise, get_seed());
+
+	/* Create cubes position staging buffer */
+	ret = create_buffer(dev, CUBES_POSITION_BUFFER_SIZE, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+						&cube->staging_position_buffer, &cube->staging_position_buffer_memory);
+	if (ret)
 		goto destroy_descriptor_set_layout;
+
+	// TODO: Move the terrain genetion to vk_main_loop
+	if (generate_terrain_buffer(dev, &game->terrain.noise, cube))
+		goto destroy_cube_staging_buffer;
+
+	if (create_cubes_position_buffers(dev, cube, dev->swapchain.support.capabilities.minImageCount + 1))
+		goto destroy_cube_staging_buffer;
+
+	for (i = 0; i < cube->position_buffer_count; i++) {
+		ret = copy_buffer(&dev->cmd_submission, cube->staging_position_buffer,
+						  cube->position_buffer[i], cube->position_count * sizeof(vec3));
+		if (ret)
+			goto destroy_cubes_position_buffers;
+	}
+
+	if (create_render_and_presentation_infra(program))
+		goto destroy_cubes_position_buffers;
 
 	/* TODO: remove this, and either
 	 * - Add a function to from these informationsload a file or
@@ -242,6 +295,11 @@ destroy_vertex_shader:
 	vkFreeMemory(dev->logical_device, cube->vertex_buffer_memory, NULL);
 destroy_render_and_presentation_infra:
 	destroy_render_and_presentation_infra(dev);
+destroy_cubes_position_buffers:
+	destroy_buffer_vector(dev, cube->position_buffer, cube->position_buffer_memory, dev->swapchain.images_count);
+destroy_cube_staging_buffer:
+	vkDestroyBuffer(dev->logical_device, cube->staging_position_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->staging_position_buffer_memory, NULL);
 destroy_descriptor_set_layout:
 	vkDestroyDescriptorSetLayout(dev->logical_device, dev->render.descriptor_set_layout, NULL);
 destroy_texture_sampler:
@@ -281,6 +339,10 @@ vk_cleanup(struct vk_program *program)
 	vkFreeMemory(dev->logical_device, cube->index_buffer_memory, NULL);
 	vkDestroyBuffer(dev->logical_device, cube->vertex_buffer, NULL);
 	vkFreeMemory(dev->logical_device, cube->vertex_buffer_memory, NULL);
+	/* Destroy buffer position vectors*/
+	destroy_buffer_vector(dev, cube->position_buffer, cube->position_buffer_memory, dev->swapchain.images_count);
+	vkDestroyBuffer(dev->logical_device, cube->staging_position_buffer, NULL);
+	vkFreeMemory(dev->logical_device, cube->staging_position_buffer_memory, NULL);
 
 	/* clean texture resources */
 	vkDestroySampler(dev->logical_device, render->texture_sampler, NULL);

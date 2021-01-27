@@ -111,8 +111,8 @@ create_shader_module(const VkDevice logical_device, const char *code, int64_t si
 int
 create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *swapchain_info, struct vk_render *render)
 {
-	static VkVertexInputAttributeDescription vertex_attribute_descriptions[2];
-	static VkVertexInputBindingDescription vertex_binding_description[1];
+	static VkVertexInputAttributeDescription vertex_attribute_descriptions[3];
+	static VkVertexInputBindingDescription vertex_binding_description[2];
 	char *vert_shader_code, *frag_shader_code;
 	int64_t vert_size, frag_size;
 	VkPipeline pipeline;
@@ -137,6 +137,8 @@ create_graphics_pipeline(const VkDevice logical_device, struct swapchain_info *s
 
 	get_vertex_binding_description(0, vertex_binding_description);
 	get_vertex_attribute_descriptions(0, 0, vertex_attribute_descriptions);
+	get_vec3_binding_description(1, VK_VERTEX_INPUT_RATE_INSTANCE, &vertex_binding_description[1]);
+	get_vec3_attribute_descriptions(1, 2, &vertex_attribute_descriptions[2]);
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
