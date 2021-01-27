@@ -28,6 +28,25 @@ get_vertex_attribute_descriptions(uint32_t binding, uint32_t first_location,
 	attribute_descriptions[1].offset = offsetof(struct vertex, texCoord);
 }
 
+void
+get_vec3_binding_description(uint32_t binding, VkVertexInputRate input_rate,
+							 VkVertexInputBindingDescription *binding_description)
+{
+	binding_description[0].binding = binding;
+	binding_description[0].stride = sizeof(vec3);
+	binding_description[0].inputRate = input_rate;
+}
+
+void
+get_vec3_attribute_descriptions(uint32_t binding, uint32_t first_location,
+								VkVertexInputAttributeDescription *attribute_descriptions)
+{
+	attribute_descriptions[0].binding = binding;
+	attribute_descriptions[0].location = first_location;
+	attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attribute_descriptions[0].offset = 0;
+}
+
 VkDescriptorSetLayout
 create_descriptor_set_layout_binding(VkDevice logical_device, uint32_t cube_texture_count)
 {
@@ -162,7 +181,7 @@ create_descriptor_sets(struct vk_device *dev, struct vk_cmd_submission *cmd_sub,
 		VkDescriptorBufferInfo buffer_info = {
 			.buffer = camera->buffers[i],
 			.offset = 0,
-			.range = sizeof(struct MVP),
+			.range = sizeof(mat4),
 		};
 
 		VkWriteDescriptorSet descriptor_writes[] = {

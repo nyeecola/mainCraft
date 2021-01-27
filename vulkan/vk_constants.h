@@ -11,6 +11,7 @@
 #endif
 
 #define MAX_FRAMES_IN_FLIGHT 2
+#define CUBES_POSITION_BUFFER_SIZE 1048576 // 1 MB
 
 extern const char *validation_layers[1];
 extern const char *device_extensions[1];

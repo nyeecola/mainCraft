@@ -10,6 +10,9 @@ int64_t
 find_memory_type(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags prop);
 
 int
+copy_buffer(struct vk_cmd_submission *cmd_sub, VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+
+int
 create_gpu_buffer(struct vk_device *dev, VkDeviceMemory *buffer_memory, VkBuffer *buffer,
 				  void *buffer_data, VkDeviceSize buffer_size, VkBufferUsageFlags usage);
 

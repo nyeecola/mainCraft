@@ -4,6 +4,8 @@
 #include <cglm/cglm.h>
 #include <stdbool.h>
 
+#include "FastNoise/FastNoiseLite.h"
+
 enum key { SPACE = 0, A, W, S, D, key_count };
 enum coodinates { X = 0, Y, coordinate_count };
 
@@ -29,9 +31,14 @@ struct player_info {
 	vec3 looking_at;
 };
 
+struct game_terrain {
+	fnl_state noise;
+};
+
 struct game_data {
 	struct game_configs configs;
 	struct player_info player;
+	struct game_terrain terrain;
 	double last_frame_time;
 };
 
