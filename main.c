@@ -29,7 +29,7 @@ enum backend_type { vulkan, opengl };
 int
 main(const int argc, char *const *argv)
 {
-	enum backend_type backend = opengl;
+	enum backend_type backend = vulkan;
 	struct option longOptions[] = LONG_OPTIONS;
 	int option = 0;
 
