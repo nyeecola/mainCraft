@@ -1,4 +1,5 @@
 # mainCraft
+
 A C version of the 'Minecraft in 500 lines of python'.
 
 ## Current state
@@ -32,6 +33,10 @@ make run
 ~~~~
 make clean
 ~~~~
+
+### Docker
+
+Check the [README.md](docker/README.md) at docker folder.
 
 ### Credits
 
