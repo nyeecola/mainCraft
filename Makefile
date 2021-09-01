@@ -18,6 +18,8 @@ ifeq (${XDG_SESSION_TYPE}, wayland)
 	MACROS += -D GLFW_USE_WAYLAND=ON
 endif
 
+all: CFLAGS += -flto
+all: LDFLAGS += -flto
 all: $(BUILD_DIR)/$(TARGET_EXEC)
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS) shaders
@@ -43,6 +45,9 @@ debug: $(BUILD_DIR)/$(TARGET_EXEC)
 
 debug_vk: MACROS += -D ENABLE_VALIDATION_LAYERS
 debug_vk: debug
+
+native: CFLAGS += -march=native
+native: all
 
 .PHONY: shaders
 shaders: shaders/main_shader.vert shaders/main_shader.frag
